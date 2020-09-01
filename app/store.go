@@ -12,6 +12,8 @@ import (
 	"github.com/hashicorp/golang-lru"
 
 	"github.com/Fantom-foundation/go-lachesis/kvdb"
+	"github.com/Fantom-foundation/go-lachesis/kvdb/flushable"
+	"github.com/Fantom-foundation/go-lachesis/kvdb/memorydb"
 	"github.com/Fantom-foundation/go-lachesis/kvdb/nokeyiserr"
 	"github.com/Fantom-foundation/go-lachesis/kvdb/table"
 	"github.com/Fantom-foundation/go-lachesis/logger"
@@ -95,12 +97,33 @@ func NewStore(mainDb kvdb.KeyValueStore, cfg StoreConfig) *Store {
 	return s
 }
 
+// NewMemStore creates store over memory map.
+func NewMemStore() *Store {
+	mems := memorydb.NewProducer("")
+	dbs := flushable.NewSyncedPool(mems)
+	cfg := LiteStoreConfig()
+
+	return NewStore(dbs.GetDb("app"), cfg)
+}
+
 func (s *Store) initCache() {
 	s.cache.Receipts = s.makeCache(s.cfg.ReceiptsCacheSize)
 	s.cache.Validators = s.makeCache(2)
 	s.cache.Stakers = s.makeCache(s.cfg.StakersCacheSize)
 	s.cache.Delegations = s.makeCache(s.cfg.DelegationsCacheSize)
 	s.cache.BlockDowntime = s.makeCache(256)
+}
+
+// Close leaves underlying database.
+func (s *Store) Close() {
+	setnil := func() interface{} {
+		return nil
+	}
+
+	table.MigrateTables(&s.table, nil)
+	table.MigrateCaches(&s.cache, setnil)
+
+	s.mainDb.Close()
 }
 
 // Commit changes.

@@ -1,6 +1,22 @@
 package app
 
+import (
+	"github.com/Fantom-foundation/go-lachesis/lachesis"
+)
+
 type (
+	Config struct {
+		Net lachesis.Config
+		StoreConfig
+
+		// TxIndex enables indexing transactions and receipts
+		TxIndex bool
+		// EpochDowntimeIndex enables indexing downtime by epoch
+		EpochDowntimeIndex bool
+		// EpochActiveValidationScoreIndex enables indexing validation score by epoch
+		EpochActiveValidationScoreIndex bool
+	}
+
 	// StoreConfig is a config for store db.
 	StoreConfig struct {
 		// Cache size for Receipts.
@@ -11,6 +27,17 @@ type (
 		DelegationsCacheSize int
 	}
 )
+
+// DefaultConfig for product.
+func DefaultConfig(network lachesis.Config) Config {
+	return Config{
+		Net:                             network,
+		TxIndex:                         true,
+		EpochDowntimeIndex:              false,
+		EpochActiveValidationScoreIndex: false,
+		StoreConfig:                     DefaultStoreConfig(),
+	}
+}
 
 // DefaultStoreConfig for product.
 func DefaultStoreConfig() StoreConfig {
