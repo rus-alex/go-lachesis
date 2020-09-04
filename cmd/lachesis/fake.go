@@ -31,10 +31,6 @@ func addFakeAccount(ctx *cli.Context, stack *node.Node) {
 	}
 
 	key := getFakeValidator(ctx)
-	if key == nil {
-		return
-	}
-
 	coinbase := integration.SetAccountKey(stack.AccountManager(), key, "fakepassword")
 	log.Info("Unlocked fake validator", "address", coinbase.Address.Hex())
 }
@@ -74,10 +70,9 @@ func parseFakeGen(s string) (num int, vaccs genesis.VAccounts, err error) {
 
 	if validatorsNum < 0 || num > validatorsNum {
 		err = fmt.Errorf("key-num should be in range from 1 to validators (<key-num>/<validators>), or should be zero for non-validator node")
-		return
 	}
 
-	vaccs = genesis.FakeValidators(validatorsNum, utils.ToFtm(1e10), utils.ToFtm(3175000))
+	vaccs = genesis.FakeAccounts(1, validatorsNum, utils.ToFtm(1e10), utils.ToFtm(3175000))
 
 	if len(parts) < 2 {
 		return
@@ -87,9 +82,13 @@ func parseFakeGen(s string) (num int, vaccs genesis.VAccounts, err error) {
 	if err != nil {
 		others, err = readAccounts(parts[1])
 	} else {
-		others = genAccounts(validatorsNum, int(i64), big.NewInt(1e18), big.NewInt(0))
+		others, err = genesis.FakeAccounts(validatorsNum+1, int(i64), big.NewInt(1e18), big.NewInt(0)).Accounts, nil
 	}
 	vaccs.Accounts.Add(others)
+
+	if err != nil {
+		return
+	}
 
 	return
 }
@@ -104,19 +103,4 @@ func readAccounts(filename string) (accs genesis.Accounts, err error) {
 	accs = genesis.Accounts{}
 	err = json.NewDecoder(f).Decode(&accs)
 	return
-}
-
-func genAccounts(offset, count int, balance *big.Int, stake *big.Int) genesis.Accounts {
-	accs := make(genesis.Accounts, count)
-
-	for i := offset; i < offset+count; i++ {
-		key := crypto.FakeKey(i)
-		addr := crypto.PubkeyToAddress(key.PublicKey)
-		accs[addr] = genesis.Account{
-			Balance:    balance,
-			PrivateKey: key,
-		}
-	}
-
-	return accs
 }
