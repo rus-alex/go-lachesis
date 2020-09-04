@@ -204,13 +204,6 @@ func (s *Store) has(table kvdb.KeyValueStore, key []byte) bool {
 	return res
 }
 
-func (s *Store) rmPrefix(t kvdb.KeyValueStore, prefix string) {
-	it := t.NewIteratorWithPrefix([]byte(prefix))
-	defer it.Release()
-
-	s.dropTable(it, t)
-}
-
 func (s *Store) dropTable(it ethdb.Iterator, t kvdb.KeyValueStore) {
 	keys := make([][]byte, 0, 500) // don't write during iteration
 
