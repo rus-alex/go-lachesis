@@ -22,6 +22,7 @@ import (
 
 // Store is a node persistent storage working over physical key-value database.
 type Store struct {
+	dbs *flushable.SyncedPool
 	cfg StoreConfig
 
 	mainDb kvdb.KeyValueStore
@@ -78,10 +79,11 @@ type Store struct {
 }
 
 // NewStore creates store over key-value db.
-func NewStore(mainDb kvdb.KeyValueStore, cfg StoreConfig) *Store {
+func NewStore(dbs *flushable.SyncedPool, cfg StoreConfig) *Store {
 	s := &Store{
+		dbs:      dbs,
 		cfg:      cfg,
-		mainDb:   mainDb,
+		mainDb:   dbs.GetDb("app-main"),
 		Instance: logger.MakeInstance(),
 	}
 
@@ -103,7 +105,7 @@ func NewMemStore() *Store {
 	dbs := flushable.NewSyncedPool(mems)
 	cfg := LiteStoreConfig()
 
-	return NewStore(dbs.GetDb("app"), cfg)
+	return NewStore(dbs, cfg)
 }
 
 func (s *Store) initCache() {

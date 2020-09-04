@@ -105,7 +105,7 @@ func NewStore(dbs *flushable.SyncedPool, cfg StoreConfig, appCfg app.StoreConfig
 	})
 
 	s.initCache()
-	s.app = app.NewStore(s.mainDb, appCfg)
+	s.app = app.NewStore(dbs, appCfg)
 
 	return s
 }
