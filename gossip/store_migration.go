@@ -27,10 +27,9 @@ func (s *Store) migrations() *migration.Migration {
 		Next("remove async data from sync DBs",
 			func() error {
 				legacyTablePackInfos := table.New(s.mainDb, []byte("p"))
-				toolsStore{s}.rmPrefix(legacyTablePackInfos, "serverPool")
-				//legacyTablePeers := table.New(s.mainDb, []byte("Z"))
-				//toolsStore{s}.rmPrefix(legacyTablePeers, "")
-				toolsStore{s}.rmPrefix(s.mainDb, "Z")
+				toolsStore{s}.delRowsByPrefix(legacyTablePackInfos, "serverPool")
+				legacyTablePeers := table.New(s.mainDb, []byte("Z"))
+				toolsStore{s}.delRowsByPrefix(legacyTablePeers, "")
 				return nil
 			}).
 		Next("remove legacy genesis field",
@@ -45,7 +44,7 @@ type toolsStore struct {
 	*Store
 }
 
-func (s toolsStore) rmPrefix(t kvdb.KeyValueStore, prefix string) {
+func (s toolsStore) delRowsByPrefix(t kvdb.KeyValueStore, prefix string) {
 	it := t.NewIteratorWithPrefix([]byte(prefix))
 	defer it.Release()
 
@@ -105,11 +104,7 @@ func (s legacyStore1) migrateMultiDelegations() error {
 				newValues = append(newValues, newValue)
 			}
 		}
-		{
-			it := legacyTableDelegations.NewIterator()
-			defer it.Release()
-			s.dropTable(it, legacyTableDelegations)
-		}
+		toolsStore{s}.delRowsByPrefix(legacyTableDelegations, "")
 		for i := range newKeys {
 			err := legacyTableDelegations.Put(newKeys[i], newValues[i])
 			if err != nil {
@@ -144,11 +139,7 @@ func (s legacyStore1) migrateMultiDelegations() error {
 				newValues = append(newKeys, it.Value())
 			}
 		}
-		{
-			it := legacyTableDelegationOldRewards.NewIterator()
-			defer it.Release()
-			s.dropTable(it, legacyTableDelegationOldRewards)
-		}
+		toolsStore{s}.delRowsByPrefix(legacyTableDelegationOldRewards, "")
 		for i := range newKeys {
 			err := legacyTableDelegationOldRewards.Put(newKeys[i], newValues[i])
 			if err != nil {
@@ -246,11 +237,7 @@ func (s legacyStore1) migrateAdjustableOfflinePeriod() error {
 				newValues = append(newValues, newValue)
 			}
 		}
-		{
-			it := legacyTableSfcConstants.NewIterator()
-			defer it.Release()
-			s.dropTable(it, legacyTableSfcConstants)
-		}
+		toolsStore{s}.delRowsByPrefix(legacyTableSfcConstants, "")
 		for i := range newKeys {
 			err := legacyTableSfcConstants.Put(newKeys[i], newValues[i])
 			if err != nil {
