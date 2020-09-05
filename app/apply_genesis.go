@@ -10,6 +10,8 @@ import (
 
 // ApplyGenesis writes initial state.
 func (s *Store) ApplyGenesis(net *lachesis.Config) (evmBlock *evmcore.EvmBlock, err error) {
+	s.migrate()
+
 	evmBlock, err = evmcore.ApplyGenesis(s.table.Evm, net)
 	if err != nil {
 		return

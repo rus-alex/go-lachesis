@@ -29,10 +29,6 @@ func MakeEngine(dataDir string, gossipCfg *gossip.Config) (*poset.Poset, *flusha
 
 	// write genesis
 
-	err := gdb.Migrate()
-	if err != nil {
-		utils.Fatalf("Failed to migrate Gossip DB: %v", err)
-	}
 	genesisAtropos, genesisState, isNew, err := gdb.ApplyGenesis(&gossipCfg.Net)
 	if err != nil {
 		utils.Fatalf("Failed to write Gossip genesis state: %v", err)
