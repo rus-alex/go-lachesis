@@ -56,7 +56,5 @@ func (s *Store) IncGasPowerRefund(epoch idx.Epoch, stakerID idx.StakerID, diff u
 
 // DelGasPowerRefunds erases all record on epoch
 func (s *Store) DelGasPowerRefunds(epoch idx.Epoch) {
-	it := s.table.GasPowerRefund.NewIteratorWithPrefix(epoch.Bytes())
-	defer it.Release()
-	s.dropTable(it, s.table.GasPowerRefund)
+	s.delRowsByPrefix(s.table.GasPowerRefund, epoch.Bytes())
 }

@@ -69,9 +69,7 @@ func (s *Store) DelWeightedDelegationsFee(stakerID idx.StakerID) {
 
 // DelAllWeightedDelegationsFee deletes all the records about gas used by delegations of all stakers
 func (s *Store) DelAllWeightedDelegationsFee() {
-	it := s.table.StakerDelegationsFee.NewIterator()
-	defer it.Release()
-	s.dropTable(it, s.table.StakerDelegationsFee)
+	s.delRowsByPrefix(s.table.StakerDelegationsFee, anyPrefix)
 }
 
 // GetAddressLastTxTime get last time for last tx from this address

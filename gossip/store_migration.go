@@ -11,7 +11,6 @@ import (
 	"github.com/Fantom-foundation/go-lachesis/inter"
 	"github.com/Fantom-foundation/go-lachesis/inter/idx"
 	"github.com/Fantom-foundation/go-lachesis/inter/sfctype"
-	"github.com/Fantom-foundation/go-lachesis/kvdb"
 	"github.com/Fantom-foundation/go-lachesis/kvdb/table"
 	"github.com/Fantom-foundation/go-lachesis/utils/migration"
 )
@@ -27,28 +26,21 @@ func (s *Store) migrations() *migration.Migration {
 		Next("remove async data from sync DBs",
 			func() error {
 				legacyTablePackInfos := table.New(s.mainDb, []byte("p"))
-				toolsStore{s}.delRowsByPrefix(legacyTablePackInfos, "serverPool")
+				s.delRowsByPrefix(legacyTablePackInfos, []byte("serverPool"))
 				legacyTablePeers := table.New(s.mainDb, []byte("Z"))
-				toolsStore{s}.delRowsByPrefix(legacyTablePeers, "")
+				s.delRowsByPrefix(legacyTablePeers, anyPrefix)
 				return nil
 			}).
 		Next("remove legacy genesis field",
-			legacyStore1{s}.migrateEraseGenesisField).
+			func() error {
+				legacyTableGenesis := table.New(s.mainDb, []byte("G"))
+				s.delRowsByPrefix(legacyTableGenesis, anyPrefix)
+				return nil
+			}).
 		Next("multi-delegations",
 			legacyStore1{s}.migrateMultiDelegations).
 		Next("adjustable offline pruning time",
 			legacyStore1{s}.migrateAdjustableOfflinePeriod)
-}
-
-type toolsStore struct {
-	*Store
-}
-
-func (s toolsStore) delRowsByPrefix(t kvdb.KeyValueStore, prefix string) {
-	it := t.NewIteratorWithPrefix([]byte(prefix))
-	defer it.Release()
-
-	s.dropTable(it, t)
 }
 
 type legacyStore1 struct {
@@ -104,7 +96,7 @@ func (s legacyStore1) migrateMultiDelegations() error {
 				newValues = append(newValues, newValue)
 			}
 		}
-		toolsStore{s}.delRowsByPrefix(legacyTableDelegations, "")
+		s.delRowsByPrefix(legacyTableDelegations, anyPrefix)
 		for i := range newKeys {
 			err := legacyTableDelegations.Put(newKeys[i], newValues[i])
 			if err != nil {
@@ -139,7 +131,7 @@ func (s legacyStore1) migrateMultiDelegations() error {
 				newValues = append(newKeys, it.Value())
 			}
 		}
-		toolsStore{s}.delRowsByPrefix(legacyTableDelegationOldRewards, "")
+		s.delRowsByPrefix(legacyTableDelegationOldRewards, anyPrefix)
 		for i := range newKeys {
 			err := legacyTableDelegationOldRewards.Put(newKeys[i], newValues[i])
 			if err != nil {
@@ -182,13 +174,6 @@ func (s legacyStore1) forEachSfcDelegation(it ethdb.Iterator, do func(sfctype.Sf
 			Delegation: delegation,
 		})
 	}
-}
-
-func (s legacyStore1) migrateEraseGenesisField() error {
-	it := s.mainDb.NewIteratorWithPrefix([]byte("G"))
-	defer it.Release()
-	s.dropTable(it, s.mainDb)
-	return nil
 }
 
 type legacySfcConstants1 struct {
@@ -237,7 +222,7 @@ func (s legacyStore1) migrateAdjustableOfflinePeriod() error {
 				newValues = append(newValues, newValue)
 			}
 		}
-		toolsStore{s}.delRowsByPrefix(legacyTableSfcConstants, "")
+		s.delRowsByPrefix(legacyTableSfcConstants, anyPrefix)
 		for i := range newKeys {
 			err := legacyTableSfcConstants.Put(newKeys[i], newValues[i])
 			if err != nil {

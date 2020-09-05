@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/hashicorp/golang-lru"
 
@@ -204,9 +203,13 @@ func (s *Store) has(table kvdb.KeyValueStore, key []byte) bool {
 	return res
 }
 
-func (s *Store) dropTable(it ethdb.Iterator, t kvdb.KeyValueStore) {
-	keys := make([][]byte, 0, 500) // don't write during iteration
+var anyPrefix = []byte{}
 
+func (s *Store) delRowsByPrefix(t kvdb.KeyValueStore, prefix []byte) {
+	it := t.NewIteratorWithPrefix(prefix)
+	defer it.Release()
+
+	keys := make([][]byte, 0, 500) // don't write during iteration
 	for it.Next() {
 		keys = append(keys, it.Key())
 	}

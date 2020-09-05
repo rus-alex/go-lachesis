@@ -19,9 +19,7 @@ func (s *Store) DelLastHeader(epoch idx.Epoch, creator idx.StakerID) {
 
 // DelLastHeaders deletes all the records about last headers
 func (s *Store) DelLastHeaders(epoch idx.Epoch) {
-	it := s.table.LastEpochHeaders.NewIteratorWithPrefix(epoch.Bytes())
-	defer it.Release()
-	s.dropTable(it, s.table.LastEpochHeaders)
+	s.delRowsByPrefix(s.table.LastEpochHeaders, epoch.Bytes())
 }
 
 // AddLastHeader adds/updates a records about last header from a validator

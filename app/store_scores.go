@@ -107,9 +107,7 @@ func (s *Store) getValidationScore(t kvdb.KeyValueStore, stakerID idx.StakerID) 
 
 // DelAllActiveValidationScores deletes all the record about dirty validation scores of stakers
 func (s *Store) DelAllActiveValidationScores() {
-	it := s.table.ActiveValidationScore.NewIterator()
-	defer it.Release()
-	s.dropTable(it, s.table.ActiveValidationScore)
+	s.delRowsByPrefix(s.table.ActiveValidationScore, anyPrefix)
 }
 
 // MoveDirtyValidationScoresToActive moves all the dirty records to active
@@ -190,9 +188,7 @@ func (s *Store) getOriginationScore(t kvdb.KeyValueStore, stakerID idx.StakerID)
 
 // DelAllActiveOriginationScores deletes all the record about dirty origination scores of stakers
 func (s *Store) DelAllActiveOriginationScores() {
-	it := s.table.ActiveOriginationScore.NewIterator()
-	defer it.Release()
-	s.dropTable(it, s.table.ActiveOriginationScore)
+	s.delRowsByPrefix(s.table.ActiveOriginationScore, anyPrefix)
 }
 
 // MoveDirtyOriginationScoresToActive moves all the dirty records to active
