@@ -11,16 +11,20 @@ import (
 	"github.com/Fantom-foundation/go-lachesis/inter"
 	"github.com/Fantom-foundation/go-lachesis/inter/idx"
 	"github.com/Fantom-foundation/go-lachesis/inter/sfctype"
+	"github.com/Fantom-foundation/go-lachesis/kvdb/flushable"
 	"github.com/Fantom-foundation/go-lachesis/kvdb/table"
 	"github.com/Fantom-foundation/go-lachesis/utils/migration"
 )
 
-func (s *Store) Migrate() error {
+func (s *Store) migrate() {
 	versions := migration.NewKvdbIDStore(s.table.Version)
-	return s.migrations().Exec(versions)
+	err := s.migrations(s.dbs).Exec(versions)
+	if err != nil {
+		s.Log.Crit("gossip store migrations", "err", err)
+	}
 }
 
-func (s *Store) migrations() *migration.Migration {
+func (s *Store) migrations(dbs *flushable.SyncedPool) *migration.Migration {
 	return migration.
 		Begin("lachesis-gossip-store").
 		Next("remove async data from sync DBs",

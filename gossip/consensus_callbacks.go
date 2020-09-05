@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/log"
 
+	"github.com/Fantom-foundation/go-lachesis/app"
 	"github.com/Fantom-foundation/go-lachesis/eventcheck"
 	"github.com/Fantom-foundation/go-lachesis/eventcheck/epochcheck"
 	"github.com/Fantom-foundation/go-lachesis/evmcore"
@@ -337,7 +338,7 @@ func (s *Service) applyBlock(block *inter.Block, decidedFrame idx.Frame, cheater
 	confirmBlocksMeter.Inc(1)
 	// if cheater is confirmed, seal epoch right away to prune them from of BFT validators list
 
-	epochStart := s.store.GetEpochStats(pendingEpoch).Start
+	epochStart := s.store.app.GetEpochStats(app.PendingEpoch).Start
 	sealEpoch = decidedFrame >= s.config.Net.Dag.MaxEpochBlocks
 	sealEpoch = sealEpoch || block.Time-epochStart >= inter.Timestamp(s.config.Net.Dag.MaxEpochDuration)
 	sealEpoch = sealEpoch || cheaters.Len() > 0

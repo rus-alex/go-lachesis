@@ -61,8 +61,6 @@ type (
 		PackInfosCacheSize int
 		// Cache size for TxPositions.
 		TxPositionsCacheSize int
-		// Cache size for EpochStats.
-		EpochStatsCacheSize int
 
 		// NOTE: fields for config-file back compatibility
 		// Cache size for Receipts.
@@ -120,7 +118,6 @@ func DefaultStoreConfig() StoreConfig {
 		BlockCacheSize:         100,
 		PackInfosCacheSize:     100,
 		TxPositionsCacheSize:   1000,
-		EpochStatsCacheSize:    100,
 	}
 }
 
@@ -132,6 +129,5 @@ func LiteStoreConfig() StoreConfig {
 		BlockCacheSize:         100,
 		PackInfosCacheSize:     100,
 		TxPositionsCacheSize:   100,
-		EpochStatsCacheSize:    100,
 	}
 }

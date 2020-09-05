@@ -1,4 +1,4 @@
-package gossip
+package app
 
 import (
 	"math"
@@ -8,12 +8,12 @@ import (
 )
 
 const (
-	pendingEpoch = idx.Epoch(math.MaxUint32 - 2)
+	PendingEpoch = idx.Epoch(math.MaxUint32 - 2)
 )
 
 // GetDirtyEpochStats returns EpochStats for current (not sealed) epoch
 func (s *Store) GetDirtyEpochStats() *sfctype.EpochStats {
-	return s.GetEpochStats(pendingEpoch)
+	return s.GetEpochStats(PendingEpoch)
 }
 
 // GetEpochStats returns EpochStats for an already sealed epoch
@@ -41,7 +41,7 @@ func (s *Store) GetEpochStats(epoch idx.Epoch) *sfctype.EpochStats {
 
 // SetDirtyEpochStats set EpochStats for current (not sealed) epoch
 func (s *Store) SetDirtyEpochStats(value *sfctype.EpochStats) {
-	s.SetEpochStats(pendingEpoch, value)
+	s.SetEpochStats(PendingEpoch, value)
 }
 
 // SetEpochStats set EpochStats for an already sealed epoch

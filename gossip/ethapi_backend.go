@@ -23,6 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	errors2 "github.com/pkg/errors"
 
+	"github.com/Fantom-foundation/go-lachesis/app"
 	"github.com/Fantom-foundation/go-lachesis/ethapi"
 	"github.com/Fantom-foundation/go-lachesis/evmcore"
 	"github.com/Fantom-foundation/go-lachesis/gossip/gasprice"
@@ -458,7 +459,7 @@ func (b *EthAPIBackend) CurrentEpoch(ctx context.Context) idx.Epoch {
 func (b *EthAPIBackend) GetEpochStats(ctx context.Context, requestedEpoch rpc.BlockNumber) (*sfctype.EpochStats, error) {
 	var epoch idx.Epoch
 	if requestedEpoch == rpc.PendingBlockNumber {
-		epoch = pendingEpoch
+		epoch = app.PendingEpoch
 	} else if requestedEpoch == rpc.LatestBlockNumber {
 		epoch = b.CurrentEpoch(ctx) - 1
 	} else {
@@ -468,7 +469,7 @@ func (b *EthAPIBackend) GetEpochStats(ctx context.Context, requestedEpoch rpc.Bl
 		return nil, errors.New("current epoch isn't sealed yet, request pending epoch")
 	}
 
-	stats := b.svc.store.GetEpochStats(epoch)
+	stats := b.svc.store.app.GetEpochStats(epoch)
 	if stats == nil {
 		return nil, nil
 	}

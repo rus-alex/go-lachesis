@@ -29,6 +29,8 @@ type Store struct {
 	table  struct {
 		Version kvdb.KeyValueStore `table:"_"`
 
+		// general economy tables
+		EpochStats kvdb.KeyValueStore `table:"E"`
 		// score economy tables
 		ActiveValidationScore  kvdb.KeyValueStore `table:"V"`
 		DirtyValidationScore   kvdb.KeyValueStore `table:"v"`
@@ -60,6 +62,10 @@ type Store struct {
 		StakerOldRewards            kvdb.KeyValueStore `table:"7"`
 		StakerDelegationsOldRewards kvdb.KeyValueStore `table:"8"`
 
+		// internal tables
+		ForEvmTable     kvdb.KeyValueStore `table:"M"`
+		ForEvmLogsTable kvdb.KeyValueStore `table:"L"`
+
 		Evm      ethdb.Database
 		EvmState state.Database
 		EvmLogs  *topicsdb.Index
@@ -71,6 +77,7 @@ type Store struct {
 		Stakers       *lru.Cache `cache:"-"` // store by pointer
 		Delegations   *lru.Cache `cache:"-"` // store by pointer
 		BlockDowntime *lru.Cache `cache:"-"` // store by pointer
+		EpochStats    *lru.Cache `cache:"-"` // store by value
 	}
 
 	mutex struct {
@@ -91,10 +98,10 @@ func NewStore(dbs *flushable.SyncedPool, cfg StoreConfig) *Store {
 
 	table.MigrateTables(&s.table, s.mainDb)
 
-	evmTable := nokeyiserr.Wrap(table.New(s.mainDb, []byte("M"))) // ETH expects that "not found" is an error
+	evmTable := nokeyiserr.Wrap(s.table.ForEvmTable) // ETH expects that "not found" is an error
 	s.table.Evm = rawdb.NewDatabase(evmTable)
 	s.table.EvmState = state.NewDatabaseWithCache(s.table.Evm, 16)
-	s.table.EvmLogs = topicsdb.New(table.New(s.mainDb, []byte("L")))
+	s.table.EvmLogs = topicsdb.New(s.table.ForEvmLogsTable)
 
 	s.initCache()
 
@@ -116,6 +123,7 @@ func (s *Store) initCache() {
 	s.cache.Stakers = s.makeCache(s.cfg.StakersCacheSize)
 	s.cache.Delegations = s.makeCache(s.cfg.DelegationsCacheSize)
 	s.cache.BlockDowntime = s.makeCache(256)
+	s.cache.EpochStats = s.makeCache(s.cfg.EpochStatsCacheSize)
 }
 
 // Close leaves underlying database.
