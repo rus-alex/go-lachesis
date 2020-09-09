@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"compress/gzip"
+
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
@@ -15,7 +16,7 @@ import (
 	"github.com/status-im/keycard-go/hexutils"
 	"gopkg.in/urfave/cli.v1"
 
-	appdb "github.com/Fantom-foundation/go-lachesis/app"
+	"github.com/Fantom-foundation/go-lachesis/app"
 	"github.com/Fantom-foundation/go-lachesis/gossip"
 	"github.com/Fantom-foundation/go-lachesis/hash"
 	"github.com/Fantom-foundation/go-lachesis/integration"
@@ -90,7 +91,9 @@ func exportChain(ctx *cli.Context) error {
 
 func makeGossipStore(dataDir string, gossipCfg *gossip.Config) *gossip.Store {
 	dbs := flushable.NewSyncedPool(integration.DBProducer(dataDir))
-	gdb := gossip.NewStore(dbs, gossipCfg.StoreConfig, appdb.LiteStoreConfig())
+	adb := app.NewStore(dbs, app.LiteStoreConfig())
+	adb.SetName("app-db")
+	gdb := gossip.NewStore(dbs, gossipCfg.StoreConfig, adb)
 	gdb.SetName("gossip-db")
 	return gdb
 }

@@ -13,25 +13,32 @@ import (
 func cachedStore() *Store {
 	mems := memorydb.NewProducer("", withDelay)
 	dbs := flushable.NewSyncedPool(mems)
-	cfg := LiteStoreConfig()
+	adb := app.NewStore(dbs, app.LiteStoreConfig())
 
-	return NewStore(dbs, cfg, app.LiteStoreConfig())
+	cfg := LiteStoreConfig()
+	s := NewStore(dbs, cfg, adb)
+
+	return s
 }
 
 func nonCachedStore() *Store {
 	mems := memorydb.NewProducer("", withDelay)
 	dbs := flushable.NewSyncedPool(mems)
-	cfg := StoreConfig{}
+	adb := app.NewStore(dbs, app.LiteStoreConfig())
 
-	return NewStore(dbs, cfg, app.LiteStoreConfig())
+	cfg := StoreConfig{}
+	s := NewStore(dbs, cfg, adb)
+	return s
 }
 
 func realStore(dir string) *Store {
 	disk := leveldb.NewProducer(dir)
 	dbs := flushable.NewSyncedPool(disk)
-	cfg := LiteStoreConfig()
+	adb := app.NewStore(dbs, app.LiteStoreConfig())
 
-	return NewStore(dbs, cfg, app.LiteStoreConfig())
+	cfg := LiteStoreConfig()
+	s := NewStore(dbs, cfg, adb)
+	return s
 }
 
 func withDelay(db kvdb.KeyValueStore) kvdb.KeyValueStore {

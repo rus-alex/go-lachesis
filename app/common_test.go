@@ -79,7 +79,7 @@ func newTestEnv() *testEnv {
 	cfg.Net.Dag.MaxEpochDuration = epochDuration
 
 	s := NewMemStore()
-	_, err := s.ApplyGenesis(&cfg.Net)
+	_, _, err := s.ApplyGenesis(&cfg.Net)
 	if err != nil {
 		panic(err)
 	}

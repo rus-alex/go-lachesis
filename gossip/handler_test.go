@@ -11,7 +11,9 @@ import (
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
+	"github.com/Fantom-foundation/go-lachesis/app"
 	"github.com/Fantom-foundation/go-lachesis/eventcheck"
 	"github.com/Fantom-foundation/go-lachesis/hash"
 	"github.com/Fantom-foundation/go-lachesis/inter"
@@ -30,7 +32,7 @@ func TestGetEvents62(t *testing.T) {
 }
 
 func testGetEvents(t *testing.T, protocol int) {
-	assertar := assert.New(t)
+	require := require.New(t)
 
 	var firstEvent *inter.Event
 	var someEvent *inter.Event
@@ -86,9 +88,8 @@ func testGetEvents(t *testing.T, protocol int) {
 	// Run each of the tests and verify the results against the chain
 	for i, tt := range tests {
 		// Send the hash request and verify the response
-		if !assertar.NoError(p2p.Send(peer.app, GetEventsMsg, tt.query)) {
-			return
-		}
+		require.NoError(p2p.Send(peer.app, GetEventsMsg, tt.query))
+
 		if err := p2p.ExpectMsg(peer.app, EventsMsg, tt.expect); err != nil {
 			t.Errorf("test %d: events mismatch: %v", i, err)
 		}
@@ -124,6 +125,7 @@ func TestBroadcastEvent(t *testing.T) {
 
 func testBroadcastEvent(t *testing.T, totalPeers int, forcedAggressiveBroadcast bool) {
 	assertar := assert.New(t)
+	require := require.New(t)
 
 	net := lachesis.FakeNetConfig(genesis.FakeAccounts(0, 1, big.NewInt(0), pos.StakeToBalance(1)))
 	config := DefaultConfig(net)
@@ -140,16 +142,17 @@ func testBroadcastEvent(t *testing.T, totalPeers int, forcedAggressiveBroadcast 
 	config.TxPool.Journal = ""
 
 	// create stores
-	store := NewMemStore()
-	genesisAtropos, genesisEvmState, _, err := store.ApplyGenesis(&net)
-	if !assertar.NoError(err) {
-		return
-	}
+	adb := app.NewMemStore()
+	state, _, err := adb.ApplyGenesis(&net)
+	require.NoError(err)
+
+	store := NewMemStore(adb)
+	genesisAtropos, genesisEvmState, _, err := store.ApplyGenesis(&net, state)
+	require.NoError(err)
+
 	engineStore := poset.NewMemStore()
 	err = engineStore.ApplyGenesis(&net.Genesis, genesisAtropos, genesisEvmState)
-	if !assertar.NoError(err) {
-		return
-	}
+	require.NoError(err)
 
 	// create consensus engine
 	engine := poset.New(net.Dag, engineStore, store)

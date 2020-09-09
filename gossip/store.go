@@ -69,20 +69,21 @@ type Store struct {
 }
 
 // NewMemStore creates store over memory map.
-func NewMemStore() *Store {
+func NewMemStore(app *app.Store) *Store {
 	mems := memorydb.NewProducer("")
 	dbs := flushable.NewSyncedPool(mems)
 	cfg := LiteStoreConfig()
-	appCfg := app.LiteStoreConfig()
+	s := NewStore(dbs, cfg, app)
 
-	return NewStore(dbs, cfg, appCfg)
+	return s
 }
 
 // NewStore creates store over key-value db.
-func NewStore(dbs *flushable.SyncedPool, cfg StoreConfig, appCfg app.StoreConfig) *Store {
+func NewStore(dbs *flushable.SyncedPool, cfg StoreConfig, app *app.Store) *Store {
 	s := &Store{
 		dbs:      dbs,
 		cfg:      cfg,
+		app:      app,
 		async:    newAsyncStore(dbs),
 		mainDb:   dbs.GetDb("gossip-main"),
 		Instance: logger.MakeInstance(),
@@ -100,7 +101,6 @@ func NewStore(dbs *flushable.SyncedPool, cfg StoreConfig, appCfg app.StoreConfig
 	})
 
 	s.initCache()
-	s.app = app.NewStore(dbs, appCfg)
 
 	return s
 }

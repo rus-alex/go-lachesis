@@ -18,6 +18,7 @@ import (
 	"github.com/naoina/toml"
 	"gopkg.in/urfave/cli.v1"
 
+	"github.com/Fantom-foundation/go-lachesis/app"
 	"github.com/Fantom-foundation/go-lachesis/evmcore"
 	"github.com/Fantom-foundation/go-lachesis/gossip"
 	"github.com/Fantom-foundation/go-lachesis/gossip/gasprice"
@@ -71,6 +72,7 @@ var tomlSettings = toml.Config{
 type config struct {
 	Node     node.Config
 	Lachesis gossip.Config
+	App      app.Config
 }
 
 func loadAllConfigs(file string, cfg *config) error {
@@ -237,7 +239,11 @@ func nodeConfigWithFlags(ctx *cli.Context, cfg node.Config) node.Config {
 func makeAllConfigs(ctx *cli.Context) *config {
 	// Defaults (low priority)
 	net := defaultLachesisConfig(ctx)
-	cfg := config{Lachesis: gossip.DefaultConfig(net), Node: defaultNodeConfig()}
+	cfg := config{
+		Lachesis: gossip.DefaultConfig(net),
+		App:      app.DefaultConfig(net),
+		Node:     defaultNodeConfig(),
+	}
 
 	// Load config file (medium priority)
 	if file := ctx.GlobalString(configFileFlag.Name); file != "" {

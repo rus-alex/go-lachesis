@@ -9,7 +9,9 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
+	"github.com/Fantom-foundation/go-lachesis/app"
 	"github.com/Fantom-foundation/go-lachesis/hash"
 	"github.com/Fantom-foundation/go-lachesis/inter"
 	"github.com/Fantom-foundation/go-lachesis/inter/pos"
@@ -21,6 +23,7 @@ import (
 func TestGetGenesisBlock(t *testing.T) {
 	logger.SetTestMode(t)
 	assertar := assert.New(t)
+	require := require.New(t)
 
 	net := lachesis.FakeNetConfig(genesis.FakeAccounts(0, 5, big.NewInt(0), pos.StakeToBalance(1)))
 	addrWithStorage := net.Genesis.Alloc.Accounts.Addresses()[0]
@@ -30,18 +33,20 @@ func TestGetGenesisBlock(t *testing.T) {
 	accountWithCode.Storage[common.Hash{}] = common.BytesToHash(common.Big1.Bytes())
 	net.Genesis.Alloc.Accounts[addrWithStorage] = accountWithCode
 
-	store := NewMemStore()
-	genesisHash, stateHash, _, err := store.ApplyGenesis(&net)
-	if !assertar.NoError(err) {
-		return
-	}
+	adb := app.NewMemStore()
+	state, _, err := adb.ApplyGenesis(&net)
+	require.NoError(err)
+
+	store := NewMemStore(adb)
+	genesisHash, stateHash, _, err := store.ApplyGenesis(&net, state)
+	require.NoError(err)
 
 	assertar.NotEqual(common.Hash{}, genesisHash)
 	assertar.NotEqual(common.Hash{}, stateHash)
 
 	reader := EvmStateReader{
 		store:    store,
-		app:      store.app,
+		app:      adb,
 		engineMu: new(sync.RWMutex),
 	}
 	genesisBlock := reader.GetBlock(common.Hash(genesisHash), 0)
@@ -50,8 +55,7 @@ func TestGetGenesisBlock(t *testing.T) {
 	assertar.Equal(net.Genesis.Time, genesisBlock.Time)
 	assertar.Empty(genesisBlock.Transactions)
 
-	statedb, err := reader.StateAt(genesisBlock.Root)
-	assertar.NoError(err)
+	statedb := reader.StateAt(genesisBlock.Root)
 	for addr, account := range net.Genesis.Alloc.Accounts {
 		assertar.Equal(account.Balance.String(), statedb.GetBalance(addr).String())
 		assertar.Equal(account.Code, statedb.GetCode(addr))
@@ -68,14 +72,17 @@ func TestGetGenesisBlock(t *testing.T) {
 func TestGetBlock(t *testing.T) {
 	logger.SetTestMode(t)
 	assertar := assert.New(t)
+	require := require.New(t)
 
 	net := lachesis.FakeNetConfig(genesis.FakeAccounts(0, 5, big.NewInt(0), pos.StakeToBalance(1)))
 
-	store := NewMemStore()
-	genesisHash, _, _, err := store.ApplyGenesis(&net)
-	if !assertar.NoError(err) {
-		return
-	}
+	adb := app.NewMemStore()
+	state, _, err := adb.ApplyGenesis(&net)
+	require.NoError(err)
+
+	store := NewMemStore(adb)
+	genesisHash, _, _, err := store.ApplyGenesis(&net, state)
+	require.NoError(err)
 
 	txs := types.Transactions{}
 	key, err := crypto.GenerateKey()

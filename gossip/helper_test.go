@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 
+	"github.com/Fantom-foundation/go-lachesis/app"
 	"github.com/Fantom-foundation/go-lachesis/hash"
 	"github.com/Fantom-foundation/go-lachesis/inter"
 	"github.com/Fantom-foundation/go-lachesis/inter/pos"
@@ -34,8 +35,14 @@ func newTestProtocolManager(nodesNum int, eventsNum int, newtx chan<- []*types.T
 		return nil, nil, err
 	}
 
-	store := NewMemStore()
-	_, _, _, err = store.ApplyGenesis(&net)
+	adb := app.NewMemStore()
+	state, _, err := adb.ApplyGenesis(&net)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	store := NewMemStore(adb)
+	_, _, _, err = store.ApplyGenesis(&net, state)
 	if err != nil {
 		return nil, nil, err
 	}
