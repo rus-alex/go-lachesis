@@ -316,20 +316,20 @@ func (s *Service) processSfc(block *inter.Block, receipts types.Receipts, blockF
 	}
 
 	// Update EpochStats
-	stats := s.store.app.GetDirtyEpochStats()
+	stats := s.app.GetDirtyEpochStats()
 	stats.TotalFee = new(big.Int).Add(stats.TotalFee, blockFee)
 	if sealEpoch {
 		// dirty EpochStats becomes active
 		stats.End = block.Time
-		s.store.app.SetEpochStats(epoch, stats)
+		s.app.SetEpochStats(epoch, stats)
 
 		// new dirty EpochStats
-		s.store.app.SetDirtyEpochStats(&sfctype.EpochStats{
+		s.app.SetDirtyEpochStats(&sfctype.EpochStats{
 			Start:    block.Time,
 			TotalFee: new(big.Int),
 		})
 	} else {
-		s.store.app.SetDirtyEpochStats(stats)
+		s.app.SetDirtyEpochStats(stats)
 	}
 
 	// Write cheaters

@@ -138,14 +138,12 @@ func (s *Store) Close() {
 	s.mainDb.Close()
 }
 
-// Commit changes.
-func (s *Store) Commit() error {
-	// Flush trie on the DB
+// FlushState changes.
+func (s *Store) FlushState() {
 	err := s.table.EvmState.TrieDB().Cap(0)
 	if err != nil {
-		s.Log.Error("Failed to flush trie DB into main DB", "err", err)
+		s.Log.Crit("Failed to flush trie on the DB", "err", err)
 	}
-	return err
 }
 
 // StateDB returns state database.

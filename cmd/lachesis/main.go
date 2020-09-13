@@ -232,7 +232,7 @@ func makeNode(ctx *cli.Context, cfg *config) *node.Node {
 
 	stack := makeConfigNode(ctx, &cfg.Node)
 
-	engine, _, gdb := integration.MakeEngine(cfg.Node.DataDir, &cfg.Lachesis, &cfg.App)
+	engine, adb, gdb := integration.MakeEngine(cfg.Node.DataDir, &cfg.Lachesis, &cfg.App)
 	metrics.SetDataDir(cfg.Node.DataDir)
 
 	// configure emitter
@@ -247,7 +247,7 @@ func makeNode(ctx *cli.Context, cfg *config) *node.Node {
 	// the factory method approach is to support service restarts without relying on the
 	// individual implementations' support for such operations.
 	gossipService := func(ctx *node.ServiceContext) (node.Service, error) {
-		return gossip.NewService(ctx, &cfg.Lachesis, gdb, engine)
+		return gossip.NewService(ctx, &cfg.Lachesis, gdb, adb, engine)
 	}
 
 	if err := stack.Register(gossipService); err != nil {

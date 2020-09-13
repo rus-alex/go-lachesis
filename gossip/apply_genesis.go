@@ -51,7 +51,7 @@ func (s *Store) ApplyGenesis(
 
 // calcGenesisHash calcs hash of genesis atropos.
 func calcGenesisHash(net *lachesis.Config, stateRoot common.Hash) hash.Event {
-	s := NewMemStore(nil)
+	s := NewMemStore()
 	defer s.Close()
 
 	s.Log.SetHandler(log.DiscardHandler())

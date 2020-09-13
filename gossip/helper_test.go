@@ -41,7 +41,7 @@ func newTestProtocolManager(nodesNum int, eventsNum int, newtx chan<- []*types.T
 		return nil, nil, err
 	}
 
-	store := NewMemStore(adb)
+	store := NewMemStore()
 	_, _, _, err = store.ApplyGenesis(&net, state)
 	if err != nil {
 		return nil, nil, err
@@ -55,7 +55,7 @@ func newTestProtocolManager(nodesNum int, eventsNum int, newtx chan<- []*types.T
 		nil,
 		&dummyTxPool{added: newtx},
 		new(sync.RWMutex),
-		mockCheckers(1, &net, engine, store),
+		mockCheckers(1, &net, engine, store, adb),
 		store,
 		engine,
 		nil,

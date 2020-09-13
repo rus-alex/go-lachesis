@@ -146,7 +146,7 @@ func testBroadcastEvent(t *testing.T, totalPeers int, forcedAggressiveBroadcast 
 	state, _, err := adb.ApplyGenesis(&net)
 	require.NoError(err)
 
-	store := NewMemStore(adb)
+	store := NewMemStore()
 	genesisAtropos, genesisEvmState, _, err := store.ApplyGenesis(&net, state)
 	require.NoError(err)
 
@@ -163,7 +163,7 @@ func testBroadcastEvent(t *testing.T, totalPeers int, forcedAggressiveBroadcast 
 	ctx := &node.ServiceContext{
 		AccountManager: mockAccountManager(net.Genesis.Alloc.Accounts, creator),
 	}
-	svc, err := NewService(ctx, &config, store, engine)
+	svc, err := NewService(ctx, &config, store, adb, engine)
 	assertar.NoError(err)
 
 	// start PM
@@ -265,10 +265,10 @@ func mockAccountManager(accs genesis.Accounts, unlock ...common.Address) *accoun
 	)
 }
 
-func mockCheckers(epoch idx.Epoch, net *lachesis.Config, engine Consensus, s *Store) *eventcheck.Checkers {
+func mockCheckers(epoch idx.Epoch, net *lachesis.Config, engine Consensus, s *Store, a *app.Store) *eventcheck.Checkers {
 	heavyCheckReader := &HeavyCheckReader{}
-	heavyCheckReader.Addrs.Store(ReadEpochPubKeys(s.app, epoch))
+	heavyCheckReader.Addrs.Store(ReadEpochPubKeys(a, epoch))
 	gasPowerCheckReader := &GasPowerCheckReader{}
-	gasPowerCheckReader.Ctx.Store(ReadGasPowerContext(s, s.app, engine.GetValidators(), engine.GetEpoch(), &net.Economy))
+	gasPowerCheckReader.Ctx.Store(ReadGasPowerContext(s, a, engine.GetValidators(), engine.GetEpoch(), &net.Economy))
 	return makeCheckers(net, heavyCheckReader, gasPowerCheckReader, engine, s)
 }

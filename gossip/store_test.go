@@ -3,7 +3,6 @@ package gossip
 import (
 	"time"
 
-	"github.com/Fantom-foundation/go-lachesis/app"
 	"github.com/Fantom-foundation/go-lachesis/kvdb"
 	"github.com/Fantom-foundation/go-lachesis/kvdb/flushable"
 	"github.com/Fantom-foundation/go-lachesis/kvdb/leveldb"
@@ -13,10 +12,9 @@ import (
 func cachedStore() *Store {
 	mems := memorydb.NewProducer("", withDelay)
 	dbs := flushable.NewSyncedPool(mems)
-	adb := app.NewStore(dbs, app.LiteStoreConfig())
 
 	cfg := LiteStoreConfig()
-	s := NewStore(dbs, cfg, adb)
+	s := NewStore(dbs, cfg)
 
 	return s
 }
@@ -24,20 +22,18 @@ func cachedStore() *Store {
 func nonCachedStore() *Store {
 	mems := memorydb.NewProducer("", withDelay)
 	dbs := flushable.NewSyncedPool(mems)
-	adb := app.NewStore(dbs, app.LiteStoreConfig())
 
 	cfg := StoreConfig{}
-	s := NewStore(dbs, cfg, adb)
+	s := NewStore(dbs, cfg)
 	return s
 }
 
 func realStore(dir string) *Store {
 	disk := leveldb.NewProducer(dir)
 	dbs := flushable.NewSyncedPool(disk)
-	adb := app.NewStore(dbs, app.LiteStoreConfig())
 
 	cfg := LiteStoreConfig()
-	s := NewStore(dbs, cfg, adb)
+	s := NewStore(dbs, cfg)
 	return s
 }
 

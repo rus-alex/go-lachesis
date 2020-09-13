@@ -120,7 +120,7 @@ type Service struct {
 	logger.Instance
 }
 
-func NewService(ctx *node.ServiceContext, config *Config, store *Store, engine Consensus) (*Service, error) {
+func NewService(ctx *node.ServiceContext, config *Config, store *Store, app *app.Store, engine Consensus) (*Service, error) {
 	svc := &Service{
 		config: config,
 
@@ -130,7 +130,7 @@ func NewService(ctx *node.ServiceContext, config *Config, store *Store, engine C
 
 		node:  ctx,
 		store: store,
-		app:   store.app,
+		app:   app,
 
 		engineMu:          new(sync.RWMutex),
 		occurredTxs:       occuredtxs.New(txsRingBufferSize, types.NewEIP155Signer(config.Net.EvmChainConfig().ChainID)),
@@ -331,6 +331,7 @@ func (s *Service) Stop() error {
 	defer s.engineMu.Unlock()
 	s.stopped = true
 
+	s.app.FlushState()
 	return s.store.Commit(nil, true)
 }
 

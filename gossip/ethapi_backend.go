@@ -469,7 +469,7 @@ func (b *EthAPIBackend) GetEpochStats(ctx context.Context, requestedEpoch rpc.Bl
 		return nil, errors.New("current epoch isn't sealed yet, request pending epoch")
 	}
 
-	stats := b.svc.store.app.GetEpochStats(epoch)
+	stats := b.svc.app.GetEpochStats(epoch)
 	if stats == nil {
 		return nil, nil
 	}

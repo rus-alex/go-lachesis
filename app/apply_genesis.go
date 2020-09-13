@@ -84,7 +84,7 @@ func (s *Store) ApplyGenesis(net *lachesis.Config) (stateRoot common.Hash, isNew
 	}
 	s.SetEpochValidators(1, validatorsArr)
 
-	s.Commit()
+	s.FlushState()
 	return
 }
 

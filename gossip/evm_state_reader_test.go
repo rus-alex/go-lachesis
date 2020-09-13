@@ -37,7 +37,7 @@ func TestGetGenesisBlock(t *testing.T) {
 	state, _, err := adb.ApplyGenesis(&net)
 	require.NoError(err)
 
-	store := NewMemStore(adb)
+	store := NewMemStore()
 	genesisHash, stateHash, _, err := store.ApplyGenesis(&net, state)
 	require.NoError(err)
 
@@ -80,7 +80,7 @@ func TestGetBlock(t *testing.T) {
 	state, _, err := adb.ApplyGenesis(&net)
 	require.NoError(err)
 
-	store := NewMemStore(adb)
+	store := NewMemStore()
 	genesisHash, _, _, err := store.ApplyGenesis(&net, state)
 	require.NoError(err)
 

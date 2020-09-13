@@ -20,7 +20,7 @@ func MakeEngine(dataDir string, gossipCfg *gossip.Config, appCfg *app.Config) (*
 	dbs := flushable.NewSyncedPool(DBProducer(dataDir))
 
 	adb := app.NewStore(dbs, appCfg.StoreConfig)
-	gdb := gossip.NewStore(dbs, gossipCfg.StoreConfig, adb)
+	gdb := gossip.NewStore(dbs, gossipCfg.StoreConfig)
 	cdb := poset.NewStore(dbs, poset.DefaultStoreConfig())
 
 	adb.SetName("app-db")
