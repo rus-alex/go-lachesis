@@ -13,7 +13,7 @@ import (
 func checkPacks(db kvdb.KeyValueStore) {
 	t := table.New(db, []byte("p"))
 
-	it := t.NewIterator()
+	it := t.NewIterator(nil, nil)
 	defer it.Release()
 
 	for it.Next() {

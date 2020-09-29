@@ -1,6 +1,7 @@
 package poset
 
 import (
+	"github.com/ethereum/go-ethereum/trie"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/core/types"
@@ -49,7 +50,7 @@ func TestPosetTxn(t *testing.T) {
 		},
 		Build: func(e *inter.Event, name string) *inter.Event {
 			e.Epoch = 1
-			e.TxHash = types.DeriveSha(e.Transactions)
+			e.TxHash = types.DeriveSha(e.Transactions, new(trie.Trie))
 			e = p.Prepare(e)
 			return e
 		},

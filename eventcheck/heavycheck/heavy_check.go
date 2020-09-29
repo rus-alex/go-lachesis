@@ -2,6 +2,7 @@ package heavycheck
 
 import (
 	"errors"
+	"github.com/ethereum/go-ethereum/trie"
 	"runtime"
 	"sync"
 
@@ -139,7 +140,7 @@ func (v *Checker) Validate(e *inter.Event) error {
 		}
 	}
 	// Merkle tree
-	if e.TxHash != types.DeriveSha(e.Transactions) {
+	if e.TxHash != types.DeriveSha(e.Transactions, new(trie.Trie)) {
 		return ErrWrongTxHash
 	}
 

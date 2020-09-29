@@ -1,6 +1,7 @@
 package poset
 
 import (
+	"github.com/ethereum/go-ethereum/trie"
 	"math/rand"
 	"testing"
 
@@ -49,7 +50,7 @@ func TestPoset(t *testing.T) {
 			if e.Seq%2 != 0 {
 				e.Transactions = append(e.Transactions, &types.Transaction{})
 			}
-			e.TxHash = types.DeriveSha(e.Transactions)
+			e.TxHash = types.DeriveSha(e.Transactions, new(trie.Trie))
 			return posets[0].Prepare(e)
 		},
 	})

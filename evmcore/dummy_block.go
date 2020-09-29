@@ -17,6 +17,7 @@
 package evmcore
 
 import (
+	"github.com/ethereum/go-ethereum/trie"
 	"math"
 	"math/big"
 
@@ -116,5 +117,5 @@ func (b *EvmBlock) EthBlock() *types.Block {
 	if b == nil {
 		return nil
 	}
-	return types.NewBlock(b.EvmHeader.EthHeader(), b.Transactions, nil, nil)
+	return types.NewBlock(b.EvmHeader.EthHeader(), b.Transactions, nil, nil, new(trie.Trie))
 }

@@ -2,6 +2,7 @@ package gossip
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/trie"
 	"math/rand"
 	"strings"
 	"sync"
@@ -426,7 +427,7 @@ func (em *Emitter) createEvent(poolTxs map[common.Address]types.Transactions) *i
 	}
 
 	// calc Merkle root
-	event.TxHash = types.DeriveSha(event.Transactions)
+	event.TxHash = types.DeriveSha(event.Transactions, new(trie.Trie))
 
 	// sign
 	myAddress := em.myAddress

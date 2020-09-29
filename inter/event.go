@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"fmt"
+	"github.com/ethereum/go-ethereum/trie"
 	"sync/atomic"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -18,7 +19,7 @@ import (
 
 var (
 	// EmptyTxHash is hash of empty transactions list. Used to check that event doesn't have transactions not having full event.
-	EmptyTxHash = types.DeriveSha(types.Transactions{})
+	EmptyTxHash = types.DeriveSha(types.Transactions{}, new(trie.Trie))
 )
 
 // EventHeaderData is the graph vertex in the Lachesis consensus algorithm

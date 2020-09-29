@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"encoding/json"
+	"github.com/ethereum/go-ethereum/trie"
 	"math/big"
 	"sort"
 
@@ -114,7 +115,7 @@ func (ga Accounts) sortedAccounts() accountsArray {
 
 // Hash returns accounts hash
 func (ga Accounts) Hash() common.Hash {
-	return types.DeriveSha(ga.sortedAccounts())
+	return types.DeriveSha(ga.sortedAccounts(), new(trie.Trie))
 }
 
 func (ga *Accounts) UnmarshalJSON(data []byte) error {

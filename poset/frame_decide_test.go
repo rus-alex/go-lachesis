@@ -1,6 +1,7 @@
 package poset
 
 import (
+	"github.com/ethereum/go-ethereum/trie"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -46,13 +47,13 @@ func TestConfirmBlockEvents(t *testing.T) {
 			if e.Seq%2 != 0 {
 				e.Transactions = append(e.Transactions, &types.Transaction{})
 			}
-			e.TxHash = types.DeriveSha(e.Transactions)
+			e.TxHash = types.DeriveSha(e.Transactions, new(trie.Trie))
 			return poset.Prepare(e)
 		},
 	})
 
 	// unconfirm all events
-	it := poset.store.table.ConfirmedEvent.NewIterator()
+	it := poset.store.table.ConfirmedEvent.NewIterator(nil, nil)
 	batch := poset.store.table.ConfirmedEvent.NewBatch()
 	for it.Next() {
 		assertar.NoError(batch.Delete(it.Key()))

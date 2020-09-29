@@ -2,6 +2,7 @@ package gossip
 
 import (
 	"errors"
+	"github.com/ethereum/go-ethereum/trie"
 	"math/big"
 	"time"
 
@@ -303,7 +304,7 @@ func (s *Service) executeEvmTransactions(
 	// Filter skipped transactions
 	evmBlock = filterSkippedTxs(block, evmBlock)
 
-	block.TxHash = types.DeriveSha(evmBlock.Transactions)
+	block.TxHash = types.DeriveSha(evmBlock.Transactions, new(trie.Trie))
 	*evmBlock = evmcore.EvmBlock{
 		EvmHeader:    *evmcore.ToEvmHeader(block),
 		Transactions: evmBlock.Transactions,

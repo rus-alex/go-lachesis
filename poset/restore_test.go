@@ -2,6 +2,7 @@ package poset
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/trie"
 	"math/rand"
 	"testing"
 
@@ -78,7 +79,7 @@ func TestRestore(t *testing.T) {
 				if e.Seq%2 != 0 {
 					e.Transactions = append(e.Transactions, &types.Transaction{})
 				}
-				e.TxHash = types.DeriveSha(e.Transactions)
+				e.TxHash = types.DeriveSha(e.Transactions, new(trie.Trie))
 				return posets[GENERATOR].Prepare(e)
 			},
 		})
@@ -200,7 +201,7 @@ func TestDbFailure(t *testing.T) {
 			if e.Seq%2 != 0 {
 				e.Transactions = append(e.Transactions, &types.Transaction{})
 			}
-			e.TxHash = types.DeriveSha(e.Transactions)
+			e.TxHash = types.DeriveSha(e.Transactions, new(trie.Trie))
 			return posets[GENERATOR].Prepare(e)
 		},
 	})
