@@ -103,7 +103,7 @@ func defaultLachesisConfig(ctx *cli.Context) lachesis.Config {
 			log.Crit("Invalid flag", "flag", FakeNetFlag.Name, "err", err)
 		}
 		cfg = lachesis.FakeNetConfig(accs)
-	case ctx.GlobalBool(utils.TestnetFlag.Name):
+	case ctx.GlobalBool(utils.LegacyTestnetFlag.Name):
 		cfg = lachesis.TestNetConfig()
 	default:
 		cfg = lachesis.MainNetConfig()
@@ -124,7 +124,7 @@ func setDataDir(ctx *cli.Context, cfg *node.Config) {
 			log.Crit("Invalid flag", "flag", FakeNetFlag.Name, "err", err)
 		}
 		cfg.DataDir = filepath.Join(defaultDataDir, fmt.Sprintf("fakenet-%d", len(accs.Accounts)))
-	case ctx.GlobalBool(utils.TestnetFlag.Name):
+	case ctx.GlobalBool(utils.LegacyTestnetFlag.Name):
 		cfg.DataDir = filepath.Join(defaultDataDir, "testnet")
 	default:
 		cfg.DataDir = defaultDataDir
@@ -190,7 +190,7 @@ func gossipConfigWithFlags(ctx *cli.Context, src gossip.Config) gossip.Config {
 	cfg := src
 
 	// Avoid conflicting network flags
-	utils.CheckExclusive(ctx, FakeNetFlag, utils.DeveloperFlag, utils.TestnetFlag)
+	utils.CheckExclusive(ctx, FakeNetFlag, utils.DeveloperFlag, utils.LegacyTestnetFlag)
 	utils.CheckExclusive(ctx, FakeNetFlag, utils.DeveloperFlag, utils.ExternalSignerFlag) // Can't use both ephemeral unlocked and external signer
 
 	setGPO(ctx, &cfg.GPO)
@@ -222,7 +222,10 @@ func gossipConfigWithFlags(ctx *cli.Context, src gossip.Config) gossip.Config {
 		cfg.EVMInterpreter = ctx.GlobalString(utils.EVMInterpreterFlag.Name)
 	}
 	if ctx.GlobalIsSet(utils.RPCGlobalGasCap.Name) {
-		cfg.RPCGasCap = new(big.Int).SetUint64(ctx.GlobalUint64(utils.RPCGlobalGasCap.Name))
+		cfg.RPCGasCap = ctx.GlobalUint64(utils.RPCGlobalGasCap.Name)
+	}
+	if ctx.GlobalIsSet(utils.RPCGlobalTxFeeCap.Name) {
+		cfg.RPCTxFeeCap = ctx.GlobalFloat64(utils.RPCGlobalTxFeeCap.Name)
 	}
 
 	return cfg
