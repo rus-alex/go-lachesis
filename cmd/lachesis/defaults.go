@@ -26,9 +26,9 @@ const (
 
 func overrideFlags() {
 	utils.ListenPortFlag.Value = DefaultP2PPort
-	utils.RPCPortFlag.Value = DefaultHTTPPort
-	utils.WSPortFlag.Value = DefaultWSPort
-	utils.GraphQLPortFlag.Value = DefaultGraphQLPort
+	utils.LegacyRPCPortFlag.Value = DefaultHTTPPort
+	utils.LegacyWSPortFlag.Value = DefaultWSPort
+	utils.LegacyGraphQLPortFlag.Value = DefaultGraphQLPort
 }
 
 // NodeDefaultConfig contains reasonable default settings.
@@ -40,7 +40,6 @@ var NodeDefaultConfig = node.Config{
 	HTTPTimeouts:        rpc.DefaultHTTPTimeouts,
 	WSPort:              DefaultWSPort,
 	WSModules:           []string{},
-	GraphQLPort:         DefaultGraphQLPort,
 	GraphQLVirtualHosts: []string{"localhost"},
 	P2P: p2p.Config{
 		NoDiscovery: false, // enable discovery v4 by default
