@@ -23,7 +23,10 @@ var (
 func init() {
 	app.Action = utils.MigrateFlags(exportChain)
 	app.Version = params.VersionWithCommit(gitCommit, gitDate)
-	app.Flags = append(app.Flags, DataDirFlag)
+	app.Flags = append(app.Flags,
+		DataDirFlag,
+		Neo4jFlag,
+	)
 }
 
 func main() {

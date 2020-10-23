@@ -7,6 +7,10 @@ import (
 	"runtime"
 )
 
+func DefaultDb() string {
+	return "bolt://localhost:7687"
+}
+
 // DefaultDataDir is the default data directory to use for the databases and other
 // persistence requirements.
 func DefaultDataDir() string {

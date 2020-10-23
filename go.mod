@@ -34,10 +34,11 @@ require (
 	github.com/mattn/go-isatty v0.0.10
 	github.com/mattn/go-runewidth v0.0.6 // indirect
 	github.com/naoina/toml v0.1.2-0.20170918210437-9fafd6967416
+	github.com/neo4j/neo4j-go-driver v1.8.3
 	github.com/olekukonko/tablewriter v0.0.2 // indirect
 	github.com/opentracing/opentracing-go v1.1.0
 	github.com/pborman/uuid v1.2.0 // indirect
-	github.com/pkg/errors v0.8.1
+	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.2.1
 	github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4
 	github.com/prometheus/tsdb v0.10.0 // indirect

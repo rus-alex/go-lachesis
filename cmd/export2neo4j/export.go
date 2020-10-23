@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/neo4j/neo4j-go-driver/neo4j"
 	"gopkg.in/urfave/cli.v1"
 
 	appdb "github.com/Fantom-foundation/go-lachesis/app"
@@ -29,22 +30,34 @@ var (
 		Usage: "Data directory for the databases of lachesis node",
 		Value: utils.DirectoryString(DefaultDataDir()),
 	}
+
+	// Neo4jFlag defines db uri
+	Neo4jFlag = cli.StringFlag{
+		Name:  "neo4j",
+		Usage: "Neo4j url",
+		Value: DefaultDb(),
+	}
 )
 
 func exportChain(ctx *cli.Context) error {
-	/*
-		if len(ctx.Args()) < 1 {
-			utils.Fatalf("This command requires an argument.")
-		}
-		open DB here ( ctx.Args().First() )
-	*/
-
 	dataDir := DefaultDataDir()
 	if ctx.GlobalIsSet(utils.DataDirFlag.Name) {
 		dataDir = ctx.GlobalString(DataDirFlag.Name)
 	}
 	gdb := makeGossipStore(dataDir)
 	defer gdb.Close()
+
+	dbUri := DefaultDb()
+	if ctx.GlobalIsSet(Neo4jFlag.Name) {
+		dbUri = ctx.GlobalString(Neo4jFlag.Name)
+	}
+	db, err := neo4j.NewDriver(dbUri, neo4j.NoAuth(), func(c *neo4j.Config) {
+		c.Encrypted = false
+	})
+	if err != nil {
+		return err
+	}
+	defer db.Close()
 
 	from := idx.Epoch(1)
 	if len(ctx.Args()) > 1 {
@@ -63,7 +76,7 @@ func exportChain(ctx *cli.Context) error {
 		to = idx.Epoch(n)
 	}
 
-	err := exportTo(gdb, from, to)
+	err = exportTo(db, gdb, from, to)
 	if err != nil {
 		utils.Fatalf("Export error: %v\n", err)
 	}
@@ -79,8 +92,14 @@ func makeGossipStore(dataDir string) *gossip.Store {
 }
 
 // exportTo writer the active chain.
-func exportTo(gdb *gossip.Store, from, to idx.Epoch) (err error) {
+func exportTo(db neo4j.Driver, gdb *gossip.Store, from, to idx.Epoch) (err error) {
 	start, reported := time.Now(), time.Time{}
+
+	session, err := db.Session(neo4j.AccessModeWrite)
+	if err != nil {
+		return
+	}
+	defer session.Close()
 
 	var (
 		counter int
@@ -90,7 +109,25 @@ func exportTo(gdb *gossip.Store, from, to idx.Epoch) (err error) {
 		if to >= from && event.Epoch > to {
 			return false
 		}
-		log.Warn("EVENT", "hash", event.Hash())
+
+		log.Info(">>>", "event", event.Hash())
+
+		_, err := session.WriteTransaction(func(ctx neo4j.Transaction) (interface{}, error) {
+			result, err := ctx.Run(
+				"CREATE (e:Event) SET e.hash = $hash",
+				map[string]interface{}{
+					"hash": event.Hash().String(),
+				})
+			if err != nil {
+				return nil, err
+			}
+			return nil, result.Err()
+		})
+		if err != nil {
+			log.Error("<<<", "err", err)
+			return false
+		}
+
 		counter++
 		last = event.Hash()
 		if counter%100 == 1 && time.Since(reported) >= statsReportLimit {
@@ -99,7 +136,7 @@ func exportTo(gdb *gossip.Store, from, to idx.Epoch) (err error) {
 		}
 		return true
 	})
-	log.Info("Exported events", "last", last.String(), "exported", counter, "elapsed", common.PrettyDuration(time.Since(start)))
 
+	log.Info("Exported events", "last", last.String(), "exported", counter, "elapsed", common.PrettyDuration(time.Since(start)))
 	return
 }
