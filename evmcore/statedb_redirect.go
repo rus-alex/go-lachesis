@@ -19,7 +19,7 @@ func (r *StateDbRedirector) GetState(addr common.Address, loc common.Hash) commo
 		if err != nil {
 			panic(err)
 		}
-		return common.BytesToHash(val)
+		_ = common.BytesToHash(val)
 	}
 	return r.StateDB.GetState(addr, loc)
 }
