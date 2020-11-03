@@ -25,6 +25,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
+
+	"github.com/Fantom-foundation/go-lachesis/kvdb"
 )
 
 // StateProcessor is a basic Processor, which takes care of transitioning
@@ -32,8 +34,9 @@ import (
 //
 // StateProcessor implements Processor.
 type StateProcessor struct {
-	config *params.ChainConfig // Chain configuration options
-	bc     DummyChain          // Canonical block chain
+	config         *params.ChainConfig // Chain configuration options
+	bc             DummyChain          // Canonical block chain
+	FlattenedState kvdb.KeyValueStore
 }
 
 // NewStateProcessor initialises a new StateProcessor.
@@ -63,7 +66,7 @@ func (p *StateProcessor) Process(block *EvmBlock, statedb *state.StateDB, cfg vm
 	// Iterate over and process the individual transactions
 	for i, tx := range block.Transactions {
 		statedb.Prepare(tx.Hash(), block.Hash, i)
-		receipt, _, fee, skip, err := ApplyTransaction(p.config, p.bc, nil, gp, statedb, block.Header(), tx, usedGas, cfg, strict)
+		receipt, _, fee, skip, err := ApplyTransaction(p.config, p.bc, nil, gp, statedb, block.Header(), tx, usedGas, cfg, strict, p.FlattenedState)
 		if !strict && (skip || err != nil) {
 			skipped = append(skipped, uint(i))
 			continue
@@ -107,6 +110,7 @@ func ApplyTransaction(
 	usedGas *uint64,
 	cfg vm.Config,
 	strict bool,
+	flattenedState kvdb.KeyValueStore,
 ) (
 	*types.Receipt,
 	uint64,
@@ -132,7 +136,7 @@ func ApplyTransaction(
 	context := NewEVMContext(msg, header, bc, author)
 	// Create a new environment which holds all relevant information
 	// about the transaction and calling mechanisms.
-	vmStateDB := &StateDbRedirector{statedb, nil}
+	vmStateDB := &StateDbRedirector{statedb, flattenedState}
 	vmenv := vm.NewEVM(context, vmStateDB, config, cfg)
 	// Apply the transaction to the current state (included in the env)
 	result, err := ApplyMessage(vmenv, msg, gp)

@@ -69,6 +69,8 @@ type Store struct {
 		BlockHashes   *lru.Cache `cache:"-"` // store by pointer
 	}
 
+	FlattenedState kvdb.KeyValueStore
+
 	mutex struct {
 		Inc sync.Mutex
 	}
@@ -89,11 +91,12 @@ func NewMemStore() *Store {
 // NewStore creates store over key-value db.
 func NewStore(dbs *flushable.SyncedPool, cfg StoreConfig, appCfg app.StoreConfig) *Store {
 	s := &Store{
-		dbs:      dbs,
-		cfg:      cfg,
-		async:    newAsyncStore(dbs),
-		mainDb:   dbs.GetDb("gossip-main"),
-		Instance: logger.MakeInstance(),
+		dbs:            dbs,
+		cfg:            cfg,
+		async:          newAsyncStore(dbs),
+		mainDb:         dbs.GetDb("gossip-main"),
+		FlattenedState: dbs.GetDb("flattened-state"),
+		Instance:       logger.MakeInstance(),
 	}
 
 	table.MigrateTables(&s.table, s.mainDb)

@@ -301,6 +301,7 @@ func (s *Service) executeEvmTransactions(
 	// s.engineMu is locked here
 
 	evmProcessor := evmcore.NewStateProcessor(s.config.Net.EvmChainConfig(), s.GetEvmStateReader())
+	evmProcessor.FlattenedState = s.store.FlattenedState
 
 	// Process txs
 	receipts, _, gasUsed, totalFee, skipped, err := evmProcessor.Process(evmBlock, statedb, vm.Config{}, false)
