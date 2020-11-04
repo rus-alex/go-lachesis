@@ -192,7 +192,8 @@ func (s *Service) applyNewState(
 	s.updateStakersPOI(block, sealEpoch)
 
 	// Process SFC contract transactions
-	s.processSfc(block, receipts, totalFee, sealEpoch, cheaters, statedb)
+	vmStateDB := &evmcore.StateDbRedirector{statedb, s.store.FlattenedState}
+	s.processSfc(block, receipts, totalFee, sealEpoch, cheaters, vmStateDB)
 
 	// Process new epoch
 	if sealEpoch {
