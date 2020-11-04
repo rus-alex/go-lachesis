@@ -4,6 +4,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/state"
 
+	"github.com/Fantom-foundation/go-lachesis/evmcore"
 	"github.com/Fantom-foundation/go-lachesis/kvdb"
 )
 
@@ -34,4 +35,15 @@ func (r *StateDbRedirector) SetState(addr common.Address, loc common.Hash, val c
 		return
 	}
 	r.StateDB.SetState(addr, loc, val)
+}
+
+func (r *StateDbRedirector) Copy() evmcore.StateDB {
+	return &StateDbRedirector{
+		r.StateDB.Copy(),
+		r.flatten,
+	}
+}
+
+func (r *StateDbRedirector) MPT() *state.StateDB {
+	return r.StateDB
 }

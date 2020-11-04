@@ -14,7 +14,6 @@ import (
 	sfctype "github.com/Fantom-foundation/go-lachesis/inter/sfctype"
 	accounts "github.com/ethereum/go-ethereum/accounts"
 	common "github.com/ethereum/go-ethereum/common"
-	state "github.com/ethereum/go-ethereum/core/state"
 	types "github.com/ethereum/go-ethereum/core/types"
 	vm "github.com/ethereum/go-ethereum/core/vm"
 	ethdb "github.com/ethereum/go-ethereum/ethdb"
@@ -209,10 +208,10 @@ func (mr *MockBackendMockRecorder) BlockByNumber(ctx, number interface{}) *gomoc
 }
 
 // StateAndHeaderByNumber mocks base method
-func (m *MockBackend) StateAndHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (*state.StateDB, *evmcore.EvmHeader, error) {
+func (m *MockBackend) StateAndHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (evmcore.StateDB, *evmcore.EvmHeader, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StateAndHeaderByNumber", ctx, number)
-	ret0, _ := ret[0].(*state.StateDB)
+	ret0, _ := ret[0].(evmcore.StateDB)
 	ret1, _ := ret[1].(*evmcore.EvmHeader)
 	ret2, _ := ret[2].(error)
 	return ret0, ret1, ret2
@@ -269,7 +268,7 @@ func (mr *MockBackendMockRecorder) GetTd(hash interface{}) *gomock.Call {
 }
 
 // GetEVM mocks base method
-func (m *MockBackend) GetEVM(ctx context.Context, msg evmcore.Message, state *state.StateDB, header *evmcore.EvmHeader) (*vm.EVM, func() error, error) {
+func (m *MockBackend) GetEVM(ctx context.Context, msg evmcore.Message, state evmcore.StateDB, header *evmcore.EvmHeader) (*vm.EVM, func() error, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetEVM", ctx, msg, state, header)
 	ret0, _ := ret[0].(*vm.EVM)

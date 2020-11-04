@@ -43,56 +43,6 @@ func NewStateProcessor(config *params.ChainConfig, bc DummyChain) *StateProcesso
 	}
 }
 
-// StateDB is a subset of *state.StateDB methods.
-type StateDB interface {
-	// vm.StateDB part
-	CreateAccount(common.Address)
-
-	SubBalance(common.Address, *big.Int)
-	AddBalance(common.Address, *big.Int)
-	GetBalance(common.Address) *big.Int
-
-	GetNonce(common.Address) uint64
-	SetNonce(common.Address, uint64)
-
-	GetCodeHash(common.Address) common.Hash
-	GetCode(common.Address) []byte
-	SetCode(common.Address, []byte)
-	GetCodeSize(common.Address) int
-
-	AddRefund(uint64)
-	SubRefund(uint64)
-	GetRefund() uint64
-
-	GetCommittedState(common.Address, common.Hash) common.Hash
-	GetState(common.Address, common.Hash) common.Hash
-	SetState(common.Address, common.Hash, common.Hash)
-
-	Suicide(common.Address) bool
-	HasSuicided(common.Address) bool
-
-	Exist(common.Address) bool
-	Empty(common.Address) bool
-
-	RevertToSnapshot(int)
-	Snapshot() int
-
-	AddLog(*types.Log)
-	AddPreimage(common.Hash, []byte)
-
-	ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error
-
-	// other part
-
-	Prepare(thash, bhash common.Hash, ti int)
-	Finalise(deleteEmptyObjects bool)
-	IntermediateRoot(deleteEmptyObjects bool) common.Hash
-	GetLogs(hash common.Hash) []*types.Log
-	BlockHash() common.Hash
-	TxIndex() int
-	Commit(deleteEmptyObjects bool) (common.Hash, error)
-}
-
 // Process processes the state changes according to the Ethereum rules by running
 // the transaction messages using the statedb and applying any rewards to both
 // the processor (coinbase) and any included uncles.

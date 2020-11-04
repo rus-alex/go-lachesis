@@ -47,11 +47,11 @@ func TestApplyGenesis(t *testing.T) {
 			table.New(
 				memorydb.New(), []byte("evm2_"))))
 
-	stateDb1, err := state.New(common.Hash{}, state.NewDatabase(db1), nil)
+	stateDb1, err := stateNew(common.Hash{}, state.NewDatabase(db1), nil)
 	if !assertar.NoError(err) {
 		return
 	}
-	stateDb2, err := state.New(common.Hash{}, state.NewDatabase(db2), nil)
+	stateDb2, err := stateNew(common.Hash{}, state.NewDatabase(db2), nil)
 	if !assertar.NoError(err) {
 		return
 	}

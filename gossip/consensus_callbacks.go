@@ -7,7 +7,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/log"
@@ -192,8 +191,7 @@ func (s *Service) applyNewState(
 	s.updateStakersPOI(block, sealEpoch)
 
 	// Process SFC contract transactions
-	vmStateDB := &evmcore.StateDbRedirector{statedb, s.store.FlattenedState}
-	s.processSfc(block, receipts, totalFee, sealEpoch, cheaters, vmStateDB)
+	s.processSfc(block, receipts, totalFee, sealEpoch, cheaters, statedb)
 
 	// Process new epoch
 	if sealEpoch {
@@ -292,7 +290,7 @@ func filterSkippedTxs(block *inter.Block, evmBlock *evmcore.EvmBlock) *evmcore.E
 func (s *Service) executeEvmTransactions(
 	block *inter.Block,
 	evmBlock *evmcore.EvmBlock,
-	statedb *state.StateDB,
+	statedb evmcore.StateDB,
 ) (
 	*inter.Block,
 	*evmcore.EvmBlock,
@@ -302,7 +300,6 @@ func (s *Service) executeEvmTransactions(
 	// s.engineMu is locked here
 
 	evmProcessor := evmcore.NewStateProcessor(s.config.Net.EvmChainConfig(), s.GetEvmStateReader())
-	evmProcessor.FlattenedState = s.store.FlattenedState
 
 	// Process txs
 	receipts, _, gasUsed, totalFee, skipped, err := evmProcessor.Process(evmBlock, statedb, vm.Config{}, false)

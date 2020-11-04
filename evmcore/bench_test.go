@@ -147,7 +147,7 @@ func benchInsertChain(b *testing.B, disk bool, gen func(int, *BlockGen)) {
 		}
 		defer db.Close()
 	}
-	stateDb, err := state.New(common.Hash{}, state.NewDatabase(db), nil)
+	stateDb, err := stateNew(common.Hash{}, state.NewDatabase(db), nil)
 	if err != nil {
 		b.Fatalf("cannot create state database: %v", err)
 		return

@@ -38,7 +38,7 @@ type BlockGen struct {
 	parent  *EvmBlock
 	chain   []*EvmBlock
 	header  *EvmHeader
-	statedb *state.StateDB
+	statedb StateDB
 
 	gasPool  *GasPool
 	txs      []*types.Transaction
@@ -178,7 +178,7 @@ func GenerateChain(config *params.ChainConfig, parent *EvmBlock, db ethdb.Databa
 	}
 
 	blocks, receipts := make([]*EvmBlock, n), make([]types.Receipts, n)
-	genblock := func(i int, parent *EvmBlock, statedb *state.StateDB) (*EvmBlock, types.Receipts) {
+	genblock := func(i int, parent *EvmBlock, statedb StateDB) (*EvmBlock, types.Receipts) {
 		b := &BlockGen{i: i, chain: blocks, parent: parent, statedb: statedb, config: config}
 		b.header = makeHeader(parent, statedb)
 
@@ -205,7 +205,7 @@ func GenerateChain(config *params.ChainConfig, parent *EvmBlock, db ethdb.Databa
 		return block, b.receipts
 	}
 	for i := 0; i < n; i++ {
-		statedb, err := state.New(parent.Root, state.NewDatabase(db), nil)
+		statedb, err := stateNew(parent.Root, state.NewDatabase(db), nil)
 		if err != nil {
 			panic(err)
 		}
@@ -219,7 +219,7 @@ func GenerateChain(config *params.ChainConfig, parent *EvmBlock, db ethdb.Databa
 	return blocks, receipts, chain
 }
 
-func makeHeader(parent *EvmBlock, state *state.StateDB) *EvmHeader {
+func makeHeader(parent *EvmBlock, state StateDB) *EvmHeader {
 	var t inter.Timestamp
 	if parent.Time == 0 {
 		t = 10

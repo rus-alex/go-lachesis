@@ -24,7 +24,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -67,12 +66,12 @@ type Backend interface {
 	HeaderByNumber(ctx context.Context, number rpc.BlockNumber) (*evmcore.EvmHeader, error)
 	HeaderByHash(ctx context.Context, hash common.Hash) (*evmcore.EvmHeader, error)
 	BlockByNumber(ctx context.Context, number rpc.BlockNumber) (*evmcore.EvmBlock, error)
-	StateAndHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (*state.StateDB, *evmcore.EvmHeader, error)
+	StateAndHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (evmcore.StateDB, *evmcore.EvmHeader, error)
 	//GetHeader(ctx context.Context, hash common.Hash) *evmcore.EvmHeader
 	GetBlock(ctx context.Context, hash common.Hash) (*evmcore.EvmBlock, error)
 	GetReceiptsByNumber(ctx context.Context, number rpc.BlockNumber) (types.Receipts, error)
 	GetTd(hash common.Hash) *big.Int
-	GetEVM(ctx context.Context, msg evmcore.Message, state *state.StateDB, header *evmcore.EvmHeader) (*vm.EVM, func() error, error)
+	GetEVM(ctx context.Context, msg evmcore.Message, state evmcore.StateDB, header *evmcore.EvmHeader) (*vm.EVM, func() error, error)
 
 	// Transaction pool API
 	SendTx(ctx context.Context, signedTx *types.Transaction) error

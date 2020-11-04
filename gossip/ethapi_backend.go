@@ -13,7 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -87,7 +86,7 @@ func (b *EthAPIBackend) BlockByNumber(ctx context.Context, number rpc.BlockNumbe
 	return blk, nil
 }
 
-func (b *EthAPIBackend) StateAndHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (*state.StateDB, *evmcore.EvmHeader, error) {
+func (b *EthAPIBackend) StateAndHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (evmcore.StateDB, *evmcore.EvmHeader, error) {
 	if number == rpc.PendingBlockNumber {
 		return nil, nil, errors.New("pending block request isn't allowed")
 	}
@@ -311,7 +310,7 @@ func (b *EthAPIBackend) GetTd(blockHash common.Hash) *big.Int {
 	return big.NewInt(0)
 }
 
-func (b *EthAPIBackend) GetEVM(ctx context.Context, msg evmcore.Message, state *state.StateDB, header *evmcore.EvmHeader) (*vm.EVM, func() error, error) {
+func (b *EthAPIBackend) GetEVM(ctx context.Context, msg evmcore.Message, state evmcore.StateDB, header *evmcore.EvmHeader) (*vm.EVM, func() error, error) {
 	state.SetBalance(msg.From(), math.MaxBig256)
 	vmError := func() error { return nil }
 

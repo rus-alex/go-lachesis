@@ -26,6 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
 	notify "github.com/ethereum/go-ethereum/event"
@@ -147,9 +148,14 @@ func TestBlockSubscription(t *testing.T) {
 	var (
 		backend = newTestBackend()
 		api     = NewPublicFilterAPI(backend)
-
+	)
+	statedb, err := stateNew(common.Hash{}, state.NewDatabase(backend.db), nil)
+	if err != nil {
+		panic(err)
+	}
+	var (
 		net         = lachesis.FakeNetConfig(genesis.FakeValidators(5, big.NewInt(0), pos.StakeToBalance(1)))
-		genesis     = evmcore.MustApplyGenesis(&net, backend.db)
+		genesis     = evmcore.MustApplyGenesis(&net, statedb)
 		chain, _, _ = evmcore.GenerateChain(
 			params.TestChainConfig, genesis, backend.db, 10, nil)
 		chainEvents = []evmcore.ChainHeadNotify{}

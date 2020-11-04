@@ -5,7 +5,6 @@ import (
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 
@@ -118,6 +117,6 @@ func (r *EvmStateReader) getBlock(h hash.Event, n idx.Block, readTxs bool) *evmc
 	return evmBlock
 }
 
-func (r *EvmStateReader) StateAt(root common.Hash) (*state.StateDB, error) {
+func (r *EvmStateReader) StateAt(root common.Hash) (evmcore.StateDB, error) {
 	return r.app.StateDB(root), nil
 }

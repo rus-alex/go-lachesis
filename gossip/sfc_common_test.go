@@ -29,7 +29,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core/state"
 	eth "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 
@@ -263,7 +262,7 @@ func (env *testEnv) ReadOnly() *bind.CallOpts {
 	return &bind.CallOpts{}
 }
 
-func (env *testEnv) State() *state.StateDB {
+func (env *testEnv) State() evmcore.StateDB {
 	return env.Store.StateDB(env.lastState)
 }
 
@@ -309,7 +308,7 @@ func (env *testEnv) CallContract(ctx context.Context, call ethereum.CallMsg, blo
 // callContract implements common code between normal and pending contract calls.
 // state is modified during execution, make sure to copy it if necessary.
 func (env *testEnv) callContract(
-	ctx context.Context, call ethereum.CallMsg, block *evmcore.EvmBlock, statedb *state.StateDB,
+	ctx context.Context, call ethereum.CallMsg, block *evmcore.EvmBlock, statedb evmcore.StateDB,
 ) (
 	ret []byte, usedGas uint64, failed bool, err error,
 ) {
@@ -324,7 +323,7 @@ func (env *testEnv) callContract(
 		call.Value = new(big.Int)
 	}
 	// Set infinite balance to the fake caller account.
-	from := statedb.GetOrNewStateObject(call.From)
+	from := statedb.MPT().GetOrNewStateObject(call.From)
 	from.SetBalance(big.NewInt(math.MaxInt64))
 
 	msg := callmsg{call}

@@ -182,7 +182,7 @@ func initTestBackend(t *testing.T, b *MockBackend) {
 		nokeyiserr.Wrap(
 			table.New(
 				memorydb.New(), []byte("evm1_"))))
-	stateDB, _ := state.New(common.HexToHash("0x0"), state.NewDatabase(db1), nil)
+	stateDB, _ := stateNew(common.HexToHash("0x0"), state.NewDatabase(db1), nil)
 	stateDB.SetNonce(common.Address{1}, 1)
 	stateDB.AddBalance(common.Address{1}, big.NewInt(10))
 	stateDB.SetCode(common.Address{1}, []byte{1, 2, 3})

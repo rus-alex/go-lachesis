@@ -26,7 +26,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/prque"
-	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	notify "github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
@@ -128,7 +127,7 @@ const (
 type stateReader interface {
 	CurrentBlock() *EvmBlock
 	GetBlock(hash common.Hash, number uint64) *EvmBlock
-	StateAt(root common.Hash) (*state.StateDB, error)
+	StateAt(root common.Hash) (StateDB, error)
 
 	MinGasPrice() *big.Int
 
@@ -237,9 +236,9 @@ type TxPool struct {
 	signer      types.Signer
 	mu          sync.RWMutex
 
-	currentState  *state.StateDB // Current state in the blockchain head
-	pendingNonces *txNoncer      // Pending state tracking virtual nonces
-	currentMaxGas uint64         // Current gas limit for transaction caps
+	currentState  StateDB   // Current state in the blockchain head
+	pendingNonces *txNoncer // Pending state tracking virtual nonces
+	currentMaxGas uint64    // Current gas limit for transaction caps
 
 	locals  *accountSet // Set of local transaction to exempt from eviction rules
 	journal *txJournal  // Journal of local transaction to back up to disk
