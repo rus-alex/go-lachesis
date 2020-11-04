@@ -33,9 +33,9 @@ attach_and_exec() {
     local CMD=$2
     local RPCP=$(($RPCP_BASE+$i))
 
-    for attempt in $(seq 20)
+    for attempt in $(seq 40)
     do
-        if (( attempt > 5 ));
+        if (( attempt > 10 ));
         then
             echo "  - attempt ${attempt}: " >&2
         fi;
