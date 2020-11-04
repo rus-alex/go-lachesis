@@ -26,6 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -146,6 +147,11 @@ func benchInsertChain(b *testing.B, disk bool, gen func(int, *BlockGen)) {
 		}
 		defer db.Close()
 	}
+	stateDb, err := state.New(common.Hash{}, state.NewDatabase(db), nil)
+	if err != nil {
+		b.Fatalf("cannot create state database: %v", err)
+		return
+	}
 
 	// Generate a chain of b.N blocks using the supplied block
 	// generator function.
@@ -156,7 +162,7 @@ func benchInsertChain(b *testing.B, disk bool, gen func(int, *BlockGen)) {
 		},
 	}
 
-	genesisBlock := MustApplyGenesis(net, db)
+	genesisBlock := MustApplyGenesis(net, stateDb)
 	genesisBlock.GasLimit = 1000000
 
 	// Time the insertion of the new chain.

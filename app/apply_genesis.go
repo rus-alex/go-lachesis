@@ -3,6 +3,8 @@ package app
 import (
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/Fantom-foundation/go-lachesis/evmcore"
 	"github.com/Fantom-foundation/go-lachesis/inter/sfctype"
 	"github.com/Fantom-foundation/go-lachesis/lachesis"
@@ -10,9 +12,14 @@ import (
 
 // ApplyGenesis writes initial state.
 func (s *Store) ApplyGenesis(net *lachesis.Config) (evmBlock *evmcore.EvmBlock, err error) {
-	evmBlock, err = evmcore.ApplyGenesis(s.table.Evm, net)
+	stateDB := s.StateDB(common.Hash{})
+	evmBlock, err = evmcore.ApplyGenesis(stateDB, net)
 	if err != nil {
 		return
+	}
+	err = s.table.EvmState.TrieDB().Cap(0)
+	if err != nil {
+		return nil, err
 	}
 
 	// calc total pre-minted supply

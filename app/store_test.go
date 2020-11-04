@@ -11,14 +11,14 @@ func cachedStore() *Store {
 	mems := memorydb.NewProducer("", withDelay)
 	cfg := LiteStoreConfig()
 
-	return NewStore(mems.OpenDb("test"), cfg)
+	return NewStore(mems.OpenDb("test"), nil, cfg)
 }
 
 func nonCachedStore() *Store {
 	mems := memorydb.NewProducer("", withDelay)
 	cfg := StoreConfig{}
 
-	return NewStore(mems.OpenDb("test"), cfg)
+	return NewStore(mems.OpenDb("test"), nil, cfg)
 }
 
 func withDelay(db kvdb.KeyValueStore) kvdb.KeyValueStore {

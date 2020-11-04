@@ -20,13 +20,10 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
-
-	"github.com/Fantom-foundation/go-lachesis/kvdb"
 )
 
 // StateProcessor is a basic Processor, which takes care of transitioning
@@ -34,9 +31,8 @@ import (
 //
 // StateProcessor implements Processor.
 type StateProcessor struct {
-	config         *params.ChainConfig // Chain configuration options
-	bc             DummyChain          // Canonical block chain
-	FlattenedState kvdb.KeyValueStore
+	config *params.ChainConfig // Chain configuration options
+	bc     DummyChain          // Canonical block chain
 }
 
 // NewStateProcessor initialises a new StateProcessor.
@@ -47,6 +43,56 @@ func NewStateProcessor(config *params.ChainConfig, bc DummyChain) *StateProcesso
 	}
 }
 
+// StateDB is a subset of *state.StateDB methods.
+type StateDB interface {
+	// vm.StateDB part
+	CreateAccount(common.Address)
+
+	SubBalance(common.Address, *big.Int)
+	AddBalance(common.Address, *big.Int)
+	GetBalance(common.Address) *big.Int
+
+	GetNonce(common.Address) uint64
+	SetNonce(common.Address, uint64)
+
+	GetCodeHash(common.Address) common.Hash
+	GetCode(common.Address) []byte
+	SetCode(common.Address, []byte)
+	GetCodeSize(common.Address) int
+
+	AddRefund(uint64)
+	SubRefund(uint64)
+	GetRefund() uint64
+
+	GetCommittedState(common.Address, common.Hash) common.Hash
+	GetState(common.Address, common.Hash) common.Hash
+	SetState(common.Address, common.Hash, common.Hash)
+
+	Suicide(common.Address) bool
+	HasSuicided(common.Address) bool
+
+	Exist(common.Address) bool
+	Empty(common.Address) bool
+
+	RevertToSnapshot(int)
+	Snapshot() int
+
+	AddLog(*types.Log)
+	AddPreimage(common.Hash, []byte)
+
+	ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error
+
+	// other part
+
+	Prepare(thash, bhash common.Hash, ti int)
+	Finalise(deleteEmptyObjects bool)
+	IntermediateRoot(deleteEmptyObjects bool) common.Hash
+	GetLogs(hash common.Hash) []*types.Log
+	BlockHash() common.Hash
+	TxIndex() int
+	Commit(deleteEmptyObjects bool) (common.Hash, error)
+}
+
 // Process processes the state changes according to the Ethereum rules by running
 // the transaction messages using the statedb and applying any rewards to both
 // the processor (coinbase) and any included uncles.
@@ -54,7 +100,7 @@ func NewStateProcessor(config *params.ChainConfig, bc DummyChain) *StateProcesso
 // Process returns the receipts and logs accumulated during the process and
 // returns the amount of gas that was used in the process. If any of the
 // transactions failed to execute due to insufficient gas it will return an error.
-func (p *StateProcessor) Process(block *EvmBlock, statedb *state.StateDB, cfg vm.Config, strict bool) (types.Receipts, []*types.Log, uint64, *big.Int, []uint, error) {
+func (p *StateProcessor) Process(block *EvmBlock, statedb StateDB, cfg vm.Config, strict bool) (types.Receipts, []*types.Log, uint64, *big.Int, []uint, error) {
 	var (
 		receipts types.Receipts
 		usedGas  = new(uint64)
@@ -66,7 +112,7 @@ func (p *StateProcessor) Process(block *EvmBlock, statedb *state.StateDB, cfg vm
 	// Iterate over and process the individual transactions
 	for i, tx := range block.Transactions {
 		statedb.Prepare(tx.Hash(), block.Hash, i)
-		receipt, _, fee, skip, err := ApplyTransaction(p.config, p.bc, nil, gp, statedb, block.Header(), tx, usedGas, cfg, strict, p.FlattenedState)
+		receipt, _, fee, skip, err := ApplyTransaction(p.config, p.bc, nil, gp, statedb, block.Header(), tx, usedGas, cfg, strict)
 		if !strict && (skip || err != nil) {
 			skipped = append(skipped, uint(i))
 			continue
@@ -79,7 +125,7 @@ func (p *StateProcessor) Process(block *EvmBlock, statedb *state.StateDB, cfg vm
 	return receipts, allLogs, *usedGas, totalFee, skipped, nil
 }
 
-func TransactionPreCheck(statedb *state.StateDB, msg types.Message, tx *types.Transaction) error {
+func TransactionPreCheck(statedb StateDB, msg types.Message, tx *types.Transaction) error {
 	nonce := statedb.GetNonce(msg.From())
 	if nonce < msg.Nonce() {
 		return ErrNonceTooHigh
@@ -104,13 +150,12 @@ func ApplyTransaction(
 	bc DummyChain,
 	author *common.Address,
 	gp *GasPool,
-	statedb *state.StateDB,
+	statedb StateDB,
 	header *EvmHeader,
 	tx *types.Transaction,
 	usedGas *uint64,
 	cfg vm.Config,
 	strict bool,
-	flattenedState kvdb.KeyValueStore,
 ) (
 	*types.Receipt,
 	uint64,
@@ -136,8 +181,7 @@ func ApplyTransaction(
 	context := NewEVMContext(msg, header, bc, author)
 	// Create a new environment which holds all relevant information
 	// about the transaction and calling mechanisms.
-	vmStateDB := &StateDbRedirector{statedb, flattenedState}
-	vmenv := vm.NewEVM(context, vmStateDB, config, cfg)
+	vmenv := vm.NewEVM(context, statedb, config, cfg)
 	// Apply the transaction to the current state (included in the env)
 	result, err := ApplyMessage(vmenv, msg, gp)
 	if err != nil {

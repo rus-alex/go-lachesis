@@ -68,6 +68,8 @@ type Store struct {
 		BlockDowntime *lru.Cache `cache:"-"` // store by pointer
 	}
 
+	flattenedState kvdb.KeyValueStore
+
 	mutex struct {
 		Inc sync.Mutex
 	}
@@ -76,11 +78,12 @@ type Store struct {
 }
 
 // NewStore creates store over key-value db.
-func NewStore(mainDb kvdb.KeyValueStore, cfg StoreConfig) *Store {
+func NewStore(mainDb, flattenedState kvdb.KeyValueStore, cfg StoreConfig) *Store {
 	s := &Store{
-		cfg:      cfg,
-		mainDb:   mainDb,
-		Instance: logger.MakeInstance(),
+		cfg:            cfg,
+		mainDb:         mainDb,
+		flattenedState: flattenedState,
+		Instance:       logger.MakeInstance(),
 	}
 
 	table.MigrateTables(&s.table, s.mainDb)
@@ -114,12 +117,12 @@ func (s *Store) Commit() error {
 }
 
 // StateDB returns state database.
-func (s *Store) StateDB(from common.Hash) *state.StateDB {
+func (s *Store) StateDB(from common.Hash) *StateDbRedirector {
 	db, err := state.New(common.Hash(from), s.table.EvmState, nil)
 	if err != nil {
 		s.Log.Crit("Failed to open state", "err", err)
 	}
-	return db
+	return &StateDbRedirector{db, s.flattenedState}
 }
 
 // StateDB returns state database.

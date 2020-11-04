@@ -21,25 +21,21 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
 
 	"github.com/Fantom-foundation/go-lachesis/inter"
 	"github.com/Fantom-foundation/go-lachesis/lachesis"
 )
 
+// StateDB is a subset of *state.StateDB methods.
+
 // ApplyGenesis writes or updates the genesis block in db.
-func ApplyGenesis(db ethdb.Database, net *lachesis.Config) (*EvmBlock, error) {
+func ApplyGenesis(statedb StateDB, net *lachesis.Config) (*EvmBlock, error) {
 	if net == nil {
 		return nil, ErrNoGenesis
 	}
 
 	// state
-	statedb, err := state.New(common.Hash{}, state.NewDatabase(db), nil)
-	if err != nil {
-		return nil, err
-	}
 	for addr, account := range net.Genesis.Alloc.Accounts {
 		statedb.AddBalance(addr, account.Balance)
 		statedb.SetCode(addr, account.Code)
@@ -55,11 +51,6 @@ func ApplyGenesis(db ethdb.Database, net *lachesis.Config) (*EvmBlock, error) {
 		return nil, err
 	}
 	block := genesisBlock(net, root)
-
-	err = statedb.Database().TrieDB().Cap(0)
-	if err != nil {
-		return nil, err
-	}
 
 	return block, nil
 }
@@ -81,8 +72,8 @@ func genesisBlock(net *lachesis.Config, root common.Hash) *EvmBlock {
 }
 
 // MustApplyGenesis writes the genesis block and state to db, panicking on error.
-func MustApplyGenesis(net *lachesis.Config, db ethdb.Database) *EvmBlock {
-	block, err := ApplyGenesis(db, net)
+func MustApplyGenesis(net *lachesis.Config, statedb StateDB) *EvmBlock {
+	block, err := ApplyGenesis(statedb, net)
 	if err != nil {
 		log.Crit("ApplyGenesis", "err", err)
 	}

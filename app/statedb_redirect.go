@@ -1,4 +1,4 @@
-package evmcore
+package app
 
 import (
 	"github.com/ethereum/go-ethereum/common"

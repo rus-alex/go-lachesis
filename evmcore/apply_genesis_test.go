@@ -20,7 +20,9 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/Fantom-foundation/go-lachesis/inter/pos"
@@ -45,8 +47,17 @@ func TestApplyGenesis(t *testing.T) {
 			table.New(
 				memorydb.New(), []byte("evm2_"))))
 
+	stateDb1, err := state.New(common.Hash{}, state.NewDatabase(db1), nil)
+	if !assertar.NoError(err) {
+		return
+	}
+	stateDb2, err := state.New(common.Hash{}, state.NewDatabase(db2), nil)
+	if !assertar.NoError(err) {
+		return
+	}
+
 	// no genesis
-	_, err := ApplyGenesis(db1, nil)
+	_, err = ApplyGenesis(stateDb1, nil)
 	if !assertar.Error(err) {
 		return
 	}
@@ -54,11 +65,11 @@ func TestApplyGenesis(t *testing.T) {
 	// the same genesis
 	accsA := genesis.FakeValidators(3, big.NewInt(10000000000), pos.StakeToBalance(1))
 	netA := lachesis.FakeNetConfig(accsA)
-	blockA1, err := ApplyGenesis(db1, &netA)
+	blockA1, err := ApplyGenesis(stateDb1, &netA)
 	if !assertar.NoError(err) {
 		return
 	}
-	blockA2, err := ApplyGenesis(db2, &netA)
+	blockA2, err := ApplyGenesis(stateDb2, &netA)
 	if !assertar.NoError(err) {
 		return
 	}
@@ -69,7 +80,7 @@ func TestApplyGenesis(t *testing.T) {
 	// different genesis
 	accsB := genesis.FakeValidators(4, big.NewInt(10000000000), pos.StakeToBalance(1))
 	netB := lachesis.FakeNetConfig(accsB)
-	blockB, err := ApplyGenesis(db2, &netB)
+	blockB, err := ApplyGenesis(stateDb2, &netB)
 	if !assertar.NotEqual(blockA1, blockB) {
 		return
 	}
