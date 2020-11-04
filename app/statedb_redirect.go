@@ -6,6 +6,7 @@ import (
 
 	"github.com/Fantom-foundation/go-lachesis/evmcore"
 	"github.com/Fantom-foundation/go-lachesis/kvdb"
+	"github.com/Fantom-foundation/go-lachesis/kvdb/memorydb"
 )
 
 type StateDbRedirector struct {
@@ -38,9 +39,15 @@ func (r *StateDbRedirector) SetState(addr common.Address, loc common.Hash, val c
 }
 
 func (r *StateDbRedirector) Copy() evmcore.StateDB {
+	db := memorydb.New()
+	err := kvdb.Copy(r.flatten, db, nil)
+	if err != nil {
+		panic(err)
+	}
+
 	return &StateDbRedirector{
 		r.StateDB.Copy(),
-		r.flatten,
+		db,
 	}
 }
 
