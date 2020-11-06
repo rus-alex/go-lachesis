@@ -5,13 +5,14 @@ package gossip
 //go:generate go run github.com/ethereum/go-ethereum/cmd/abigen --bin=ballot/solc/Ballot.bin --abi=ballot/solc/Ballot.abi --pkg=ballot --type=Contract --out=ballot/contract.go
 
 import (
+	"math/big"
 	"testing"
 
 	eth "github.com/ethereum/go-ethereum/core/types"
 	"github.com/stretchr/testify/require"
 
 	"github.com/Fantom-foundation/go-lachesis/gossip/ballot"
-	//"github.com/Fantom-foundation/go-lachesis/utils"
+	"github.com/Fantom-foundation/go-lachesis/utils"
 )
 
 // Benchmark
@@ -21,12 +22,14 @@ func TestStateDB(b *testing.T) {
 	env := newTestEnv()
 	defer env.Close()
 
-	// contract deploy
-	addr, tx, cBallot, err := ballot.DeployContract(env.Payer(1), env, [][32]byte{
+	proposals := [][32]byte{
 		ballotOption("Option 1"),
 		ballotOption("Option 2"),
 		ballotOption("Option 3"),
-	})
+	}
+
+	// contract deploy
+	addr, tx, cBallot, err := ballot.DeployContract(env.Payer(1), env, proposals)
 	require.NoError(err)
 	require.NotNil(cBallot)
 	r := env.ApplyBlock(nextEpoch, tx)
@@ -34,17 +37,42 @@ func TestStateDB(b *testing.T) {
 
 	admin, err := cBallot.Chairperson(env.ReadOnly())
 	require.NoError(err)
-	b.Log(admin)
+	require.Equal(env.Address(1), admin)
 
-	const count = 500
-	txs := make([]*eth.Transaction, 0, count)
-	for i := 1; i <= count; i++ {
-		tx, err := cBallot.GiveRightToVote(env.Payer(int(1)), env.Address(i))
+	count := 105 // b.N
+
+	// Init accounts
+	txs := make([]*eth.Transaction, 0, count-1)
+	for i := 2; i <= count; i++ {
+		tx := env.Transfer(1, i, utils.ToFtm(10))
 		require.NoError(err)
 		txs = append(txs, tx)
 	}
 	env.ApplyBlock(nextEpoch, txs...)
 
+	// GiveRightToVote
+	txs = make([]*eth.Transaction, 0, count)
+	for i := 1; i <= count; i++ {
+		tx, err := cBallot.GiveRightToVote(env.Payer(1), env.Address(i))
+		require.NoError(err)
+		txs = append(txs, tx)
+	}
+	env.ApplyBlock(nextEpoch, txs...)
+
+	// Vote
+	txs = make([]*eth.Transaction, 0, count)
+	for i := 1; i <= count; i++ {
+		proposal := big.NewInt(int64(i % len(proposals)))
+		tx, err := cBallot.Vote(env.Payer(i), proposal)
+		require.NoError(err)
+		txs = append(txs, tx)
+	}
+	env.ApplyBlock(nextEpoch, txs...)
+
+	// Winer
+	winner, err := cBallot.WinnerName(env.ReadOnly())
+	require.NoError(err)
+	b.Log(string(winner[:]))
 }
 
 func ballotOption(str string) (res [32]byte) {
