@@ -11,13 +11,28 @@ import (
 	eth "github.com/ethereum/go-ethereum/core/types"
 	"github.com/stretchr/testify/require"
 
+	"github.com/Fantom-foundation/go-lachesis/app"
 	"github.com/Fantom-foundation/go-lachesis/gossip/ballot"
 	"github.com/Fantom-foundation/go-lachesis/logger"
 	"github.com/Fantom-foundation/go-lachesis/utils"
 )
 
 func BenchmarkStateDB(b *testing.B) {
-	logger.SetTestMode(b)
+	logger.SetLevel("warn")
+	//logger.SetTestMode(b)
+
+	_ = true &&
+		b.Run("overMPT", func(b *testing.B) {
+			app.EnabledStateDbRedirection = false
+			benchmarkStateDB(b)
+		}) &&
+		b.Run("Flattened", func(b *testing.B) {
+			app.EnabledStateDbRedirection = true
+			benchmarkStateDB(b)
+		})
+}
+
+func benchmarkStateDB(b *testing.B) {
 	require := require.New(b)
 
 	env := newTestEnv()
