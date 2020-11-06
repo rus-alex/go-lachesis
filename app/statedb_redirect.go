@@ -14,7 +14,7 @@ type StateDbRedirector struct {
 	flatten kvdb.KeyValueStore
 }
 
-func (r *StateDbRedirector) GetState(addr common.Address, loc common.Hash) common.Hash {
+func (r *StateDbRedirector) GetState1(addr common.Address, loc common.Hash) common.Hash {
 	if r.flatten != nil {
 		key := append(addr.Bytes(), loc.Bytes()...)
 		val, err := r.flatten.Get(key)
@@ -26,7 +26,7 @@ func (r *StateDbRedirector) GetState(addr common.Address, loc common.Hash) commo
 	return r.StateDB.GetState(addr, loc)
 }
 
-func (r *StateDbRedirector) SetState(addr common.Address, loc common.Hash, val common.Hash) {
+func (r *StateDbRedirector) SetState1(addr common.Address, loc common.Hash, val common.Hash) {
 	if r.flatten != nil {
 		key := append(addr.Bytes(), loc.Bytes()...)
 		err := r.flatten.Put(key, val.Bytes())
