@@ -1,4 +1,14 @@
-# Result:
+# Benchmark:
+
+`$ go test -bench=BenchmarkStateDB -benchmem ./gossip`
+```
+BenchmarkStateDB/overMPT-3                   556           2292697 ns/op          103313 B/op        756 allocs/op
+BenchmarkStateDB/Flattened-3                 578           2362428 ns/op          102416 B/op        751 allocs/op
+```
+Flattened state db is faster about 3% then MPT.
+
+
+# Practice:
 
 go-lachesis import of 20 epoches:
 
