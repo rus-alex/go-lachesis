@@ -12,11 +12,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Fantom-foundation/go-lachesis/gossip/ballot"
+	"github.com/Fantom-foundation/go-lachesis/logger"
 	"github.com/Fantom-foundation/go-lachesis/utils"
 )
 
-// Benchmark
-func TestStateDB(b *testing.T) {
+func BenchmarkStateDB(b *testing.B) {
+	logger.SetTestMode(b)
 	require := require.New(b)
 
 	env := newTestEnv()
@@ -39,7 +40,7 @@ func TestStateDB(b *testing.T) {
 	require.NoError(err)
 	require.Equal(env.Address(1), admin)
 
-	count := 105 // b.N
+	count := b.N
 
 	// Init accounts
 	txs := make([]*eth.Transaction, 0, count-1)
@@ -70,9 +71,8 @@ func TestStateDB(b *testing.T) {
 	env.ApplyBlock(nextEpoch, txs...)
 
 	// Winer
-	winner, err := cBallot.WinnerName(env.ReadOnly())
+	_, err = cBallot.WinnerName(env.ReadOnly())
 	require.NoError(err)
-	b.Log(string(winner[:]))
 }
 
 func ballotOption(str string) (res [32]byte) {
