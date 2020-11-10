@@ -7,9 +7,13 @@ package gossip
 import (
 	"io/ioutil"
 	"math/big"
+	"math/rand"
 	"os"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/core/state"
 	eth "github.com/ethereum/go-ethereum/core/types"
 	"github.com/stretchr/testify/require"
 
@@ -19,6 +23,7 @@ import (
 	"github.com/Fantom-foundation/go-lachesis/kvdb"
 	"github.com/Fantom-foundation/go-lachesis/kvdb/leveldb"
 	"github.com/Fantom-foundation/go-lachesis/kvdb/memorydb"
+	"github.com/Fantom-foundation/go-lachesis/kvdb/nokeyiserr"
 	"github.com/Fantom-foundation/go-lachesis/logger"
 	"github.com/Fantom-foundation/go-lachesis/utils"
 )
@@ -34,7 +39,7 @@ func BenchmarkPureDB(b *testing.B) {
 	})
 
 	b.Run("LevelDB", func(b *testing.B) {
-		dbdir, err := ioutil.TempDir("", "benchmark_leveldb*")
+		dbdir, err := ioutil.TempDir("", "benchmark_puredb*")
 		require.NoError(b, err)
 
 		dbs := leveldb.NewProducer(dbdir)
@@ -46,7 +51,7 @@ func BenchmarkPureDB(b *testing.B) {
 
 func benchmarkPureDB(b *testing.B, dbs kvdb.DbProducer, data hash.Events) {
 	require := require.New(b)
-	db := dbs.OpenDb("bench")
+	db := dbs.OpenDb(uniqName())
 	defer db.Close()
 
 	x := len(data)
@@ -68,21 +73,98 @@ func benchmarkPureDB(b *testing.B, dbs kvdb.DbProducer, data hash.Events) {
 }
 
 func BenchmarkStateDB(b *testing.B) {
+	logger.SetTestMode(b)
+
+	data := make([]common.Hash, 100)
+	for i := 0; i < len(data); i++ {
+		data[i] = hash.FakeHash(int64(i))
+	}
+
+	b.Run("MemoryDB", func(b *testing.B) {
+		dbs := memorydb.NewProducer("")
+		benchmarkStateDB(b, dbs, data)
+	})
+
+	b.Run("LevelDB", func(b *testing.B) {
+		dbdir, err := ioutil.TempDir("", "benchmark_statedb*")
+		require.NoError(b, err)
+
+		dbs := leveldb.NewProducer(dbdir)
+		defer os.RemoveAll(dbdir)
+
+		benchmarkStateDB(b, dbs, data)
+	})
+}
+
+func benchmarkStateDB(b *testing.B, dbs kvdb.DbProducer, data []common.Hash) {
+	db := dbs.OpenDb(uniqName())
+	stateStore := state.NewDatabase(
+		rawdb.NewDatabase(
+			nokeyiserr.Wrap(
+				db)))
+
+	b.Run("Flattened", func(b *testing.B) {
+		stateDB, err := state.New(common.Hash{}, stateStore, nil)
+		require.NoError(b, err)
+
+		flatten := dbs.OpenDb(uniqName())
+		defer flatten.Close()
+
+		flattened := app.NewStateDbRedirector(stateDB, flatten)
+		benchmarkStateDbOver(b, flattened, data)
+	})
+
+	b.Run("OverMPT", func(b *testing.B) {
+		stateDB, err := state.New(common.Hash{}, stateStore, nil)
+		require.NoError(b, err)
+
+		MPT := app.NewStateDbRedirector(stateDB, nil)
+		benchmarkStateDbOver(b, MPT, data)
+	})
+}
+
+func benchmarkStateDbOver(b *testing.B, stateDB *app.StateDbRedirector, data []common.Hash) {
+	require := require.New(b)
+
+	x := len(data)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		// write
+
+		loc := data[i%x]
+		addr := common.BytesToAddress(loc[:common.AddressLength])
+		val := data[(i+1)%x]
+		stateDB.SetState(addr, loc, val)
+		// read
+		if i < (x / 10) {
+			continue
+		}
+		loc = data[(i-10)%x]
+		addr = common.BytesToAddress(loc[:common.AddressLength])
+		val = stateDB.GetState(addr, loc)
+		require.NotEmpty(val)
+	}
+	root, err := stateDB.Commit(true)
+	require.NoError(err)
+	require.NotEmpty(root)
+}
+
+func BenchmarkStateDbWithBallot(b *testing.B) {
 	logger.SetLevel("warn")
 	//logger.SetTestMode(b)
 
 	b.Run("overMPT", func(b *testing.B) {
 		app.EnabledStateDbRedirection = false
-		benchmarkStateDB(b)
+		benchmarkStateDbWithBallot(b)
 	})
 
 	b.Run("Flattened", func(b *testing.B) {
 		app.EnabledStateDbRedirection = true
-		benchmarkStateDB(b)
+		benchmarkStateDbWithBallot(b)
 	})
 }
 
-func benchmarkStateDB(b *testing.B) {
+func benchmarkStateDbWithBallot(b *testing.B) {
 	require := require.New(b)
 
 	env := newTestEnv()
@@ -147,4 +229,8 @@ func ballotOption(str string) (res [32]byte) {
 	}
 	copy(res[:], buf)
 	return
+}
+
+func uniqName() string {
+	return hash.FakeHash(rand.Int63()).Hex()
 }

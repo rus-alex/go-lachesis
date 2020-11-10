@@ -18,6 +18,13 @@ type StateDbRedirector struct {
 	flatten kvdb.KeyValueStore
 }
 
+func NewStateDbRedirector(stateDb *state.StateDB, flatten kvdb.KeyValueStore) *StateDbRedirector {
+	return &StateDbRedirector{
+		StateDB: stateDb,
+		flatten: flatten,
+	}
+}
+
 func (r *StateDbRedirector) GetState(addr common.Address, loc common.Hash) common.Hash {
 	if EnabledStateDbRedirection && r.flatten != nil {
 		log.Debug("enabled StateDbRedirection")
