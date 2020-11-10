@@ -21,6 +21,7 @@ import (
 	"github.com/Fantom-foundation/go-lachesis/gossip/ballot"
 	"github.com/Fantom-foundation/go-lachesis/hash"
 	"github.com/Fantom-foundation/go-lachesis/kvdb"
+	"github.com/Fantom-foundation/go-lachesis/kvdb/flushable"
 	"github.com/Fantom-foundation/go-lachesis/kvdb/leveldb"
 	"github.com/Fantom-foundation/go-lachesis/kvdb/memorydb"
 	"github.com/Fantom-foundation/go-lachesis/kvdb/nokeyiserr"
@@ -87,10 +88,22 @@ func BenchmarkStateDB(b *testing.B) {
 
 	b.Run("LevelDB", func(b *testing.B) {
 		dbdir, err := ioutil.TempDir("", "benchmark_statedb*")
+		defer os.RemoveAll(dbdir)
 		require.NoError(b, err)
 
 		dbs := leveldb.NewProducer(dbdir)
+
+		benchmarkStateDB(b, dbs, data)
+	})
+
+	b.Run("CachedLevelDB", func(b *testing.B) {
+		dbdir, err := ioutil.TempDir("", "benchmark_statedb*")
+		require.NoError(b, err)
 		defer os.RemoveAll(dbdir)
+
+		dbs := flushable.NewSyncedPool(
+			leveldb.NewProducer(dbdir))
+		defer dbs.Flush([]byte("0"))
 
 		benchmarkStateDB(b, dbs, data)
 	})
@@ -103,15 +116,15 @@ func benchmarkStateDB(b *testing.B, dbs kvdb.DbProducer, data []common.Hash) {
 			nokeyiserr.Wrap(
 				db)))
 
-	b.Run("Flattened", func(b *testing.B) {
+	b.Run("OverKVDB", func(b *testing.B) {
 		stateDB, err := state.New(common.Hash{}, stateStore, nil)
 		require.NoError(b, err)
 
 		flatten := dbs.OpenDb(uniqName())
 		defer flatten.Close()
 
-		flattened := app.NewStateDbRedirector(stateDB, flatten)
-		benchmarkStateDbOver(b, flattened, data)
+		KVDB := app.NewStateDbRedirector(stateDB, flatten)
+		benchmarkStateDbOver(b, KVDB, data)
 	})
 
 	b.Run("OverMPT", func(b *testing.B) {
@@ -126,11 +139,12 @@ func benchmarkStateDB(b *testing.B, dbs kvdb.DbProducer, data []common.Hash) {
 func benchmarkStateDbOver(b *testing.B, stateDB *app.StateDbRedirector, data []common.Hash) {
 	require := require.New(b)
 
-	x := len(data)
 	b.ResetTimer()
+	defer b.StopTimer()
+
+	x := len(data)
 	for i := 0; i < b.N; i++ {
 		// write
-
 		loc := data[i%x]
 		addr := common.BytesToAddress(loc[:common.AddressLength])
 		val := data[(i+1)%x]

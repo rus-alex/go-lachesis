@@ -69,6 +69,10 @@ func (p *SyncedPool) dropDb(name string) {
 	p.queuedDrops[name] = struct{}{}
 }
 
+func (p *SyncedPool) OpenDb(name string) kvdb.KeyValueStore {
+	return p.GetDb(name)
+}
+
 func (p *SyncedPool) GetDb(name string) kvdb.KeyValueStore {
 	p.Lock()
 	defer p.Unlock()
@@ -88,6 +92,10 @@ func (p *SyncedPool) getDb(name string) kvdb.KeyValueStore {
 	p.wrappers[name] = wrapper
 
 	return wrapper
+}
+
+func (p *SyncedPool) Names() []string {
+	return p.producer.Names()
 }
 
 func (p *SyncedPool) Flush(id []byte) error {
