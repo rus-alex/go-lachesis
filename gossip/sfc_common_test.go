@@ -39,6 +39,8 @@ import (
 	"github.com/Fantom-foundation/go-lachesis/inter"
 	"github.com/Fantom-foundation/go-lachesis/inter/idx"
 	"github.com/Fantom-foundation/go-lachesis/inter/pos"
+	"github.com/Fantom-foundation/go-lachesis/kvdb/flushable"
+	"github.com/Fantom-foundation/go-lachesis/kvdb/memorydb"
 	"github.com/Fantom-foundation/go-lachesis/lachesis"
 	"github.com/Fantom-foundation/go-lachesis/lachesis/genesis"
 	"github.com/Fantom-foundation/go-lachesis/logger"
@@ -75,14 +77,23 @@ type testEnv struct {
 	eventSeq idx.Event
 }
 
-func newTestEnv() *testEnv {
+func newTestEnv(flattenedState bool) *testEnv {
 	vaccs := genesis.FakeValidators(genesisStakers, utils.ToFtm(genesisBalance), utils.ToFtm(genesisStake))
 	cfg := &Config{
 		Net: lachesis.FakeNetConfig(vaccs),
 	}
 	cfg.Net.Dag.MaxEpochDuration = epochDuration
 
-	s := NewMemStore()
+	mems := memorydb.NewProducer("")
+	dbs := flushable.NewSyncedPool(mems)
+	storeCfg := LiteStoreConfig()
+	appCfg := app.LiteStoreConfig()
+	s := NewStore(dbs, storeCfg, appCfg)
+
+	if !flattenedState {
+		s.app = app.NewStore(s.mainDb, nil, appCfg)
+	}
+
 	_, _, _, err := s.ApplyGenesis(&cfg.Net)
 	if err != nil {
 		panic(err)

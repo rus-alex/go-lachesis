@@ -122,7 +122,7 @@ func (s *Store) StateDB(from common.Hash) *StateDbRedirector {
 	if err != nil {
 		s.Log.Crit("Failed to open state", "err", err)
 	}
-	return &StateDbRedirector{db, s.flattenedState}
+	return NewStateDbRedirector(db, s.flattenedState)
 }
 
 // StateDB returns state database.

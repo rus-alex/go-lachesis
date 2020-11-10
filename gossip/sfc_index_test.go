@@ -27,7 +27,7 @@ type commonSfc interface {
 func TestSFC(t *testing.T) {
 	logger.SetTestMode(t)
 
-	env := newTestEnv()
+	env := newTestEnv(true)
 	defer env.Close()
 
 	sfcProxy, err := sfcproxy.NewContract(sfc.ContractAddress, env)

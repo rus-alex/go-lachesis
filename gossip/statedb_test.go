@@ -154,21 +154,20 @@ func BenchmarkStateDbWithBallot(b *testing.B) {
 	//logger.SetTestMode(b)
 
 	b.Run("overMPT", func(b *testing.B) {
-		app.EnabledStateDbRedirection = false
-		benchmarkStateDbWithBallot(b)
+		env := newTestEnv(false)
+		defer env.Close()
+		benchmarkStateDbWithBallot(b, env)
 	})
 
 	b.Run("Flattened", func(b *testing.B) {
-		app.EnabledStateDbRedirection = true
-		benchmarkStateDbWithBallot(b)
+		env := newTestEnv(true)
+		defer env.Close()
+		benchmarkStateDbWithBallot(b, env)
 	})
 }
 
-func benchmarkStateDbWithBallot(b *testing.B) {
+func benchmarkStateDbWithBallot(b *testing.B, env *testEnv) {
 	require := require.New(b)
-
-	env := newTestEnv()
-	defer env.Close()
 
 	proposals := [][32]byte{
 		ballotOption("Option 1"),
