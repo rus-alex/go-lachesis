@@ -5,7 +5,9 @@ package gossip
 //go:generate go run github.com/ethereum/go-ethereum/cmd/abigen --bin=ballot/solc/Ballot.bin --abi=ballot/solc/Ballot.abi --pkg=ballot --type=Contract --out=ballot/contract.go
 
 import (
+	"io/ioutil"
 	"math/big"
+	"os"
 	"testing"
 
 	eth "github.com/ethereum/go-ethereum/core/types"
@@ -13,9 +15,51 @@ import (
 
 	"github.com/Fantom-foundation/go-lachesis/app"
 	"github.com/Fantom-foundation/go-lachesis/gossip/ballot"
+	"github.com/Fantom-foundation/go-lachesis/hash"
+	"github.com/Fantom-foundation/go-lachesis/kvdb"
+	"github.com/Fantom-foundation/go-lachesis/kvdb/leveldb"
 	"github.com/Fantom-foundation/go-lachesis/logger"
 	"github.com/Fantom-foundation/go-lachesis/utils"
 )
+
+func BenchmarkPureDB(b *testing.B) {
+	logger.SetTestMode(b)
+
+	data := hash.FakeEvents(100)
+
+	b.Run("LevelDB", func(b *testing.B) {
+		dbdir, err := ioutil.TempDir("", "benchmark_leveldb*")
+		require.NoError(b, err)
+
+		dbs := leveldb.NewProducer(dbdir)
+		defer os.RemoveAll(dbdir)
+
+		benchmarkPureDB(b, dbs, data)
+	})
+}
+
+func benchmarkPureDB(b *testing.B, dbs kvdb.DbProducer, data hash.Events) {
+	require := require.New(b)
+	db := dbs.OpenDb("bench")
+	defer db.Close()
+
+	x := len(data)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		// write
+		key := data[i%x].Bytes()
+		val := data[(i+1)%x].Bytes()
+		err := db.Put(key, val)
+		require.NoError(err)
+		// read
+		if i < (x / 10) {
+			continue
+		}
+		key = data[(i-10)%x].Bytes()
+		_, err = db.Get(key)
+		require.NoError(err)
+	}
+}
 
 func BenchmarkStateDB(b *testing.B) {
 	logger.SetLevel("warn")
