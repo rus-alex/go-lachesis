@@ -11,12 +11,26 @@ BenchmarkPureDB/LevelDB-3                  35722             34919 ns/op        
 Memory is 41% faster than disk.
 
 
-## StateDB benchmark:
+## SSTORE/SLOAD benchmark:
+
+`$ go test -bench=BenchmarkStateDB -benchmem ./gossip`
+```
+BenchmarkStateDB/MemoryDB/OverKVDB-3               37676             33396 ns/op            2584 B/op         32 allocs/op
+BenchmarkStateDB/MemoryDB/OverMPT-3                24478             49286 ns/op            5785 B/op         59 allocs/op
+BenchmarkStateDB/LevelDB/OverKVDB-3                25848             46883 ns/op            3002 B/op         37 allocs/op
+BenchmarkStateDB/LevelDB/OverMPT-3                 25093             46714 ns/op            5833 B/op         60 allocs/op
+BenchmarkStateDB/CachedLevelDB/OverKVDB-3          35586             32842 ns/op            2711 B/op         36 allocs/op
+BenchmarkStateDB/CachedLevelDB/OverMPT-3           25064             46785 ns/op            5785 B/op         59 allocs/op
+```
+SSTORE/SLOAD over flattened KVDB is 30% faster than over MPT (obvious because MPT is over KVDB).
+
+
+## StateDB with Ballot contract benchmark:
 
 `$ go test -bench=BenchmarkStateDbWithBallot -benchmem ./gossip`
 ```
-BenchmarkStateDbWithBallot/overMPT-3                   556           2292697 ns/op          103313 B/op        756 allocs/op
-BenchmarkStateDbWithBallot/Flattened-3                 578           2362428 ns/op          102416 B/op        751 allocs/op
+BenchmarkStateDbWithBallot/overMPT-3                 561           2356892 ns/op          103571 B/op        760 allocs/op
+BenchmarkStateDbWithBallot/overKVDB-3                596           2316528 ns/op          102279 B/op        751 allocs/op
 ```
 Using flattened state db instead of MPT gets faster about 3%.
 

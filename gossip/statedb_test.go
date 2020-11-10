@@ -174,7 +174,7 @@ func BenchmarkStateDbWithBallot(b *testing.B) {
 		benchmarkStateDbWithBallot(b, env)
 	})
 
-	b.Run("Flattened", func(b *testing.B) {
+	b.Run("overKVDB", func(b *testing.B) {
 		env := newTestEnv(true)
 		defer env.Close()
 		benchmarkStateDbWithBallot(b, env)
