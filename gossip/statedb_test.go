@@ -18,6 +18,7 @@ import (
 	"github.com/Fantom-foundation/go-lachesis/hash"
 	"github.com/Fantom-foundation/go-lachesis/kvdb"
 	"github.com/Fantom-foundation/go-lachesis/kvdb/leveldb"
+	"github.com/Fantom-foundation/go-lachesis/kvdb/memorydb"
 	"github.com/Fantom-foundation/go-lachesis/logger"
 	"github.com/Fantom-foundation/go-lachesis/utils"
 )
@@ -26,6 +27,11 @@ func BenchmarkPureDB(b *testing.B) {
 	logger.SetTestMode(b)
 
 	data := hash.FakeEvents(100)
+
+	b.Run("MemoryDB", func(b *testing.B) {
+		dbs := memorydb.NewProducer("")
+		benchmarkPureDB(b, dbs, data)
+	})
 
 	b.Run("LevelDB", func(b *testing.B) {
 		dbdir, err := ioutil.TempDir("", "benchmark_leveldb*")
@@ -65,15 +71,15 @@ func BenchmarkStateDB(b *testing.B) {
 	logger.SetLevel("warn")
 	//logger.SetTestMode(b)
 
-	_ = true &&
-		b.Run("overMPT", func(b *testing.B) {
-			app.EnabledStateDbRedirection = false
-			benchmarkStateDB(b)
-		}) &&
-		b.Run("Flattened", func(b *testing.B) {
-			app.EnabledStateDbRedirection = true
-			benchmarkStateDB(b)
-		})
+	b.Run("overMPT", func(b *testing.B) {
+		app.EnabledStateDbRedirection = false
+		benchmarkStateDB(b)
+	})
+
+	b.Run("Flattened", func(b *testing.B) {
+		app.EnabledStateDbRedirection = true
+		benchmarkStateDB(b)
+	})
 }
 
 func benchmarkStateDB(b *testing.B) {
