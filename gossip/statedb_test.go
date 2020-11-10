@@ -144,6 +144,10 @@ func benchmarkStateDbOver(b *testing.B, stateDB *app.StateDbRedirector, data []c
 
 	x := len(data)
 	for i := 0; i < b.N; i++ {
+		// flush
+		root, err := stateDB.Commit(true)
+		require.NoError(err)
+		require.NotEmpty(root)
 		// write
 		loc := data[i%x]
 		addr := common.BytesToAddress(loc[:common.AddressLength])
@@ -158,9 +162,6 @@ func benchmarkStateDbOver(b *testing.B, stateDB *app.StateDbRedirector, data []c
 		val = stateDB.GetState(addr, loc)
 		require.NotEmpty(val)
 	}
-	root, err := stateDB.Commit(true)
-	require.NoError(err)
-	require.NotEmpty(root)
 }
 
 func BenchmarkStateDbWithBallot(b *testing.B) {
