@@ -1,4 +1,17 @@
-# Benchmark:
+# State store: Flattened vs MPT 
+
+
+## Pure DB benchmark:
+
+`$ go test -benchmem -bench=BenchmarkPureDB ./gossip`
+```
+BenchmarkPureDB/MemoryDB-3                 57889             20900 ns/op            1488 B/op         17 allocs/op
+BenchmarkPureDB/LevelDB-3                  35722             34919 ns/op            1893 B/op         21 allocs/op
+```
+Memory is 41% faster than disk.
+
+
+## StateDB benchmark:
 
 `$ go test -bench=BenchmarkStateDB -benchmem ./gossip`
 ```
@@ -8,14 +21,14 @@ BenchmarkStateDB/Flattened-3                 578           2362428 ns/op        
 Using flattened state db instead of MPT gets faster about 3%.
 
 
-# Practice:
+## Real node benchmark:
 
-go-lachesis import of 20 epoches:
+### go-lachesis import of 20 epoches:
 
  * 11:52 - MPT (branch develop2)
  * 11:43 - no MPT (branch flatten-evm-storage)
 
-# How to reproduce:
+### How to reproduce:
 
 1. Export events:
 ```
