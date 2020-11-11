@@ -166,7 +166,7 @@ func benchmarkStateDbOver(b *testing.B, stateDB *app.StateDbRedirector, data []c
 
 func BenchmarkStateDbWithBallot(b *testing.B) {
 	logger.SetLevel("warn")
-	//logger.SetTestMode(b)
+	logger.SetTestMode(b)
 
 	b.Run("overMPT", func(b *testing.B) {
 		env := newTestEnv(false)
