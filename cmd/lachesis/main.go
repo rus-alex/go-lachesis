@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"sort"
 	"strings"
@@ -197,6 +199,10 @@ func init() {
 }
 
 func main() {
+	go func() {
+		http.ListenAndServe("127.0.0.1:8080", nil)
+	}()
+
 	if err := app.Run(os.Args); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
