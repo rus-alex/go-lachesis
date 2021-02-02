@@ -1,6 +1,6 @@
 module github.com/Fantom-foundation/go-lachesis
 
-go 1.13
+go 1.15
 
 require (
 	github.com/allegro/bigcache v1.2.1 // indirect
