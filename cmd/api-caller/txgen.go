@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/Fantom-foundation/go-lachesis/cmd/tx-storm/meta"
@@ -15,6 +16,7 @@ import (
 
 type Transaction struct {
 	Raw  *types.Transaction
+	Call *ethereum.CallMsg
 	Info *meta.Info
 }
 
@@ -165,7 +167,11 @@ func (g *Generator) generate(position uint) *Transaction {
 	amount := big.NewInt(1e6)
 
 	tx := &Transaction{
-		Raw:  from.TransactionTo(to, nonce, amount, g.chainId),
+		Raw: from.TransactionTo(to, nonce, amount, g.chainId),
+		Call: &ethereum.CallMsg{
+			From: *from.Addr,
+			To:   to.Addr,
+		},
 		Info: meta.NewInfo(a, b),
 	}
 

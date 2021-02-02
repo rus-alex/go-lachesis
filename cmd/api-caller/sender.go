@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"math/rand"
 	"sync"
 	"time"
 
@@ -134,11 +135,23 @@ func (s *Sender) background() {
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		if s.cfg.sendTrustedTx {
-			err = client.SendTrustedTransaction(ctx, tx.Raw)
-		} else {
-			err = client.SendTransaction(ctx, tx.Raw)
+		/*
+			if s.cfg.sendTrustedTx {
+				err = client.SendTrustedTransaction(ctx, tx.Raw)
+			} else {
+				err = client.SendTransaction(ctx, tx.Raw)
+			}
+		*/
+
+		call := ethereum.CallMsg{
+			From: tx.Call.From,
+			To:   tx.Call.To,
+			Data: make([]byte, 1024*8),
 		}
+		rand.Read(call.Data)
+
+		_, err = client.EstimateGas(ctx, call)
+
 		cancel()
 		if err == nil {
 			txCountSentMeter.Inc(1)
