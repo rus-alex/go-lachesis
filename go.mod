@@ -3,6 +3,7 @@ module github.com/Fantom-foundation/go-lachesis
 go 1.15
 
 require (
+	github.com/VictoriaMetrics/fastcache v1.5.2
 	github.com/allegro/bigcache v1.2.1 // indirect
 	github.com/aristanetworks/goarista v0.0.0-20191023202215-f096da5361bb // indirect
 	github.com/beorn7/perks v1.0.1
