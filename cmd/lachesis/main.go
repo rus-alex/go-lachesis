@@ -200,6 +200,9 @@ func init() {
 
 func main() {
 	go func() {
+		defer func() {
+			_ = recover()
+		}()
 		http.ListenAndServe("127.0.0.1:8080", nil)
 	}()
 
