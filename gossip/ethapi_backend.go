@@ -73,7 +73,8 @@ func (b *EthAPIBackend) HeaderByHash(ctx context.Context, h common.Hash) (*evmco
 // BlockByNumber returns block by its number.
 func (b *EthAPIBackend) BlockByNumber(ctx context.Context, number rpc.BlockNumber) (*evmcore.EvmBlock, error) {
 	if number == rpc.PendingBlockNumber {
-		return nil, errors.New("pending block request isn't allowed")
+		number = rpc.LatestBlockNumber
+		//return nil, errors.New("pending block request isn't allowed")
 	}
 	// Otherwise resolve and return the block
 	var blk *evmcore.EvmBlock
@@ -89,7 +90,8 @@ func (b *EthAPIBackend) BlockByNumber(ctx context.Context, number rpc.BlockNumbe
 
 func (b *EthAPIBackend) StateAndHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (*state.StateDB, *evmcore.EvmHeader, error) {
 	if number == rpc.PendingBlockNumber {
-		return nil, nil, errors.New("pending block request isn't allowed")
+		number = rpc.LatestBlockNumber
+		// return nil, nil, errors.New("pending block request isn't allowed")
 	}
 	var header *evmcore.EvmHeader
 	if number == rpc.LatestBlockNumber {
@@ -274,7 +276,8 @@ func (b *EthAPIBackend) GetReceiptsByNumber(ctx context.Context, number rpc.Bloc
 	}
 
 	if number == rpc.PendingBlockNumber {
-		return nil, errors.New("pending block request isn't allowed")
+		number = rpc.LatestBlockNumber
+		//return nil, errors.New("pending block request isn't allowed")
 	}
 	if number == rpc.LatestBlockNumber {
 		header := b.state.CurrentHeader()
@@ -632,7 +635,8 @@ func (b *EthAPIBackend) BlocksTTF(ctx context.Context, untilBlock rpc.BlockNumbe
 		return nil, errors.New("arrival-time index is disabled (enable EventLocalTimeIndex and re-process the DAGs)")
 	}
 	if untilBlock == rpc.PendingBlockNumber {
-		return nil, errors.New("pending block request isn't allowed")
+		untilBlock = rpc.LatestBlockNumber
+		//return nil, errors.New("pending block request isn't allowed")
 	}
 	if untilBlock == rpc.LatestBlockNumber {
 		untilBlock = rpc.BlockNumber(b.state.CurrentHeader().Number.Uint64())
