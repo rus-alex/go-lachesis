@@ -3,12 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"math/big"
-	"math/rand"
 	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
@@ -17,10 +16,10 @@ import (
 )
 
 type Sender struct {
-	url     string
-	input   chan *Transaction
-	headers chan *types.Header
-	output  chan Block
+	url       string
+	input     chan *Transaction
+	callbacks map[common.Hash]TxCallback
+	headers   chan *types.Header
 
 	cfg struct {
 		listenToBlocks bool
@@ -33,23 +32,13 @@ type Sender struct {
 	logger.Instance
 }
 
-type Block struct {
-	Number  *big.Int
-	TxCount uint
-}
-
-func NewSender(url string, listenToBlocks, sendTrustedTx bool) *Sender {
+func NewSender(url string) *Sender {
 	s := &Sender{
-		url:     url,
-		input:   make(chan *Transaction, 10),
-		headers: make(chan *types.Header, 1),
-		output:  make(chan Block, 1),
-		done:    make(chan struct{}),
-
-		cfg: struct {
-			listenToBlocks bool
-			sendTrustedTx  bool
-		}{listenToBlocks, sendTrustedTx},
+		url:       url,
+		input:     make(chan *Transaction, 10),
+		callbacks: make(map[common.Hash]TxCallback),
+		headers:   make(chan *types.Header, 1),
+		done:      make(chan struct{}),
 
 		Instance: logger.MakeInstance(),
 	}
@@ -68,16 +57,11 @@ func (s *Sender) Close() {
 	s.done = nil
 
 	s.work.Wait()
-	close(s.output)
 	close(s.input)
 }
 
 func (s *Sender) Send(tx *Transaction) {
 	s.input <- tx
-}
-
-func (s *Sender) Blocks() <-chan Block {
-	return s.output
 }
 
 func (s *Sender) background() {
@@ -110,15 +94,14 @@ func (s *Sender) background() {
 
 		for tx == nil {
 			select {
-			case tx = <-s.input:
-				info = tx.Info.String()
 			case b := <-s.headers:
-				err = s.countTxs(client, b)
+				err = s.onNewHeader(client, b)
 				if err != nil {
 					disconnect()
 				}
 			case <-s.done:
 				return
+			case tx = <-s.input:
 			}
 		}
 
@@ -134,33 +117,27 @@ func (s *Sender) background() {
 			}
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		/*
-			if s.cfg.sendTrustedTx {
-				err = client.SendTrustedTransaction(ctx, tx.Raw)
-			} else {
-				err = client.SendTransaction(ctx, tx.Raw)
-			}
-		*/
-
-		call := ethereum.CallMsg{
-			From: tx.Call.From,
-			To:   tx.Call.To,
-			Data: make([]byte, 1024*8),
+		txHash := tx.Raw.Hash()
+		if tx.Callback != nil {
+			s.callbacks[txHash] = tx.Callback
 		}
-		rand.Read(call.Data)
-
-		_, err = client.EstimateGas(ctx, call)
-
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		err = client.SendTransaction(ctx, tx.Raw)
 		cancel()
 		if err == nil {
 			txCountSentMeter.Inc(1)
-			s.Log.Debug("tx sending ok", "info", info, "amount", tx.Raw.Value(), "nonce", tx.Raw.Nonce())
+			s.Log.Debug("tx sending ok", "hash", txHash, "amount", tx.Raw.Value(), "nonce", tx.Raw.Nonce())
 			tx = nil
 			continue
 		}
+
+		if tx.Callback != nil {
+			delete(s.callbacks, txHash)
+			tx.Callback(nil, err)
+		}
+
 		switch err.Error() {
-		case fmt.Sprintf("known transaction: %x", tx.Raw.Hash()),
+		case fmt.Sprintf("known transaction: %x", txHash),
 			evmcore.ErrNonceTooLow.Error(),
 			evmcore.ErrReplaceUnderpriced.Error():
 			s.Log.Warn("tx sending skip", "info", info, "amount", tx.Raw.Value(), "cause", err, "nonce", tx.Raw.Nonce())
@@ -197,20 +174,39 @@ func (s *Sender) subscribe(client *ethclient.Client) ethereum.Subscription {
 	return sbscr
 }
 
-func (s *Sender) countTxs(client *ethclient.Client, h *types.Header) error {
+func (s *Sender) onNewHeader(client *ethclient.Client, h *types.Header) error {
 	b := evmcore.ConvertFromEthHeader(h)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	txs, err := client.TransactionCount(ctx, b.Hash)
-	cancel()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	txsCount, err := client.TransactionCount(ctx, b.Hash)
 	if err != nil {
 		s.Log.Error("new block", "number", b.Number, "block", b.Hash, "err", err)
 		return err
 	}
 
-	s.output <- Block{
-		Number:  b.Number,
-		TxCount: txs,
+	for index := uint(0); index < txsCount; index++ {
+		tx, err := client.TransactionInBlock(ctx, b.Hash, index)
+		if err != nil {
+			s.Log.Error("new tx", "number", b.Number, "block", b.Hash, "index", index, "err", err)
+			return err
+		}
+		txHash := tx.Hash()
+
+		callback := s.callbacks[txHash]
+		if callback == nil {
+			continue
+		}
+
+		r, err := client.TransactionReceipt(ctx, txHash)
+		if err != nil {
+			s.Log.Error("new recepie", "number", b.Number, "block", b.Hash, "tx", txHash, "err", err)
+			return err
+		}
+
+		callback(r, nil)
 	}
+
 	return nil
 }
 

@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"math/big"
 	"time"
+
+	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/Fantom-foundation/go-lachesis/logger"
 	"github.com/Fantom-foundation/go-lachesis/utils"
@@ -11,28 +12,25 @@ import (
 
 // Nodes pool.
 type Nodes struct {
-	tps    chan float64
-	conns  []*Sender
-	blocks chan Block
-	done   chan struct{}
-	cfg    *Config
+	tps      chan float64
+	receipts chan int64
+	conns    []*Sender
+	done     chan struct{}
+	cfg      *Config
 	logger.Instance
 }
 
 func NewNodes(cfg *Config, input <-chan *Transaction) *Nodes {
 	n := &Nodes{
 		tps:      make(chan float64, 1),
-		blocks:   make(chan Block, 1),
+		receipts: make(chan int64, 10),
 		done:     make(chan struct{}),
 		cfg:      cfg,
 		Instance: logger.MakeInstance(),
 	}
 
-	was := make(map[string]struct{}, len(cfg.URLs))
 	for _, url := range cfg.URLs {
-		_, double := was[url]
-		n.add(url, !double)
-		was[url] = struct{}{}
+		n.add(url)
 	}
 
 	n.notifyTPS(0)
@@ -59,47 +57,33 @@ func (n *Nodes) notifyTPS(tps float64) {
 
 func (n *Nodes) measureTPS() {
 	var (
-		lastBlock *big.Int
-		avgbuff   = utils.NewAvgBuff(10)
-		start     = time.Unix(1, 0)
+		avgbuff = utils.NewAvgBuff(10)
+		start   = time.Unix(1, 0)
+		prev    float64
 	)
-	for b := range n.blocks {
-		if lastBlock != nil && b.Number.Cmp(lastBlock) < 1 {
-			continue
-		}
-
-		txCountGotMeter.Inc(int64(b.TxCount))
+	for txCount := range n.receipts {
+		txCountGotMeter.Inc(int64(txCount))
 
 		dur := time.Since(start).Seconds()
-		tps := float64(b.TxCount) / dur
-		avgbuff.Push(float64(b.TxCount), dur)
+		tps := float64(txCount) / dur
+		avgbuff.Push(float64(txCount), dur)
 
 		txTpsMeter.Update(int64(tps))
 
 		start = time.Now()
-		lastBlock = b.Number
 		avg := avgbuff.Avg()
-		n.notifyTPS(avg)
-		n.Log.Info("TPS", "block", b.Number, "value", tps, "avg", avg)
+		if abs(prev-avg) >= 1.0 {
+			prev = avg
+			n.notifyTPS(avg)
+			n.Log.Info("TPS", "value", tps, "avg", avg)
+		}
 	}
 }
 
-func (n *Nodes) add(url string, is1st bool) {
-	c := NewSender(url, is1st, n.cfg.SendTrusted)
+func (n *Nodes) add(url string) {
+	c := NewSender(url)
 	c.SetName(fmt.Sprintf("Node-%d", len(n.conns)))
 	n.conns = append(n.conns, c)
-
-	go func() {
-		defer n.stop()
-		for b := range c.Blocks() {
-			n.blocks <- b
-		}
-	}()
-}
-
-func (n *Nodes) stop() {
-	// TODO: mutex
-	close(n.blocks)
 }
 
 func (n *Nodes) background(input <-chan *Transaction) {
@@ -110,11 +94,32 @@ func (n *Nodes) background(input <-chan *Transaction) {
 	i := 0
 	for tx := range input {
 		c := n.conns[i]
-		c.Send(tx)
+		c.Send(n.wrapWithCounter(tx))
 		i = (i + 1) % len(n.conns)
 	}
 
 	for _, c := range n.conns {
 		c.Close()
 	}
+}
+
+func (n *Nodes) wrapWithCounter(tx *Transaction) *Transaction {
+	callback := tx.Callback
+	tx.Callback = func(r *types.Receipt, e error) {
+		if r != nil {
+			n.receipts <- 1
+		}
+		if callback != nil {
+			callback(r, e)
+		}
+	}
+
+	return tx
+}
+
+func abs(x float64) float64 {
+	if x < 0 {
+		return -x
+	}
+	return x
 }

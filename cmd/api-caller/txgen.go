@@ -7,27 +7,30 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
-	"github.com/Fantom-foundation/go-lachesis/cmd/tx-storm/meta"
 	"github.com/Fantom-foundation/go-lachesis/logger"
+	"github.com/Fantom-foundation/go-lachesis/utils"
 )
 
+type TxCallback func(*types.Receipt, error)
+
 type Transaction struct {
-	Raw  *types.Transaction
-	Call *ethereum.CallMsg
-	Info *meta.Info
+	Raw      *types.Transaction
+	Callback TxCallback
 }
 
 type Generator struct {
 	tps     uint32
 	chainId uint
+	signer  types.Signer
 
-	instances uint
-	accs      []*Acc
-	offset    uint
-	position  uint
+	instances      uint
+	accs           []*Acc
+	offset         uint
+	position       uint
+	generatorState genState
 
 	work sync.WaitGroup
 	done chan struct{}
@@ -41,6 +44,7 @@ func NewTxGenerator(cfg *Config, num, ofTotal uint) *Generator {
 	offset := cfg.Accs.Offset + accs*(num-1)
 	g := &Generator{
 		chainId:   uint(cfg.ChainId),
+		signer:    types.NewEIP155Signer(big.NewInt(int64(cfg.ChainId))),
 		instances: ofTotal,
 		accs:      make([]*Acc, accs),
 		offset:    offset,
@@ -137,13 +141,18 @@ func (g *Generator) background(output chan<- *Transaction) {
 }
 
 func (g *Generator) Yield() *Transaction {
-	tx := g.generate(g.position)
+	tx := g.generate(g.position, &g.generatorState)
 	g.position++
 
 	return tx
 }
 
-func (g *Generator) generate(position uint) *Transaction {
+type genState struct {
+	BallotAddr common.Address
+	sync.WaitGroup
+}
+
+func (g *Generator) generate(position uint, state *genState) *Transaction {
 	var count = uint(len(g.accs))
 
 	a := position % count
@@ -164,17 +173,40 @@ func (g *Generator) generate(position uint) *Transaction {
 	b += g.offset
 
 	nonce := position / count
-	amount := big.NewInt(1e6)
 
-	tx := &Transaction{
-		Raw: from.TransactionTo(to, nonce, amount, g.chainId),
-		Call: &ethereum.CallMsg{
-			From: *from.Addr,
-			To:   to.Addr,
-		},
-		Info: meta.NewInfo(a, b),
+	state.Wait()
+	var (
+		tx       *types.Transaction
+		callback TxCallback
+	)
+	switch step := (position % 5); step {
+	case 0:
+		amount := utils.ToFtm(0)
+		tx = g.createContract(from.Key, nonce, amount)
+		state.Add(1)
+		callback = func(r *types.Receipt, e error) {
+			state.Done()
+			state.BallotAddr = r.ContractAddress
+		}
+	case 1:
+		break
+	case 2:
+		break
+	case 3:
+		break
+	case 4:
+		break
+	case 5:
+		break
+	default:
+		panic("-")
+	}
+
+	transaction := &Transaction{
+		Raw:      tx,
+		Callback: callback,
 	}
 
 	// g.Log.Info("regular tx", "from", a, "to", b, "amount", amount, "nonce", nonce)
-	return tx
+	return transaction
 }
