@@ -12,7 +12,7 @@ import (
 var ConfigFileFlag = cli.StringFlag{
 	Name:  "config",
 	Usage: "TOML configuration file",
-	Value: "tx-storm.toml",
+	Value: "api-caller.toml",
 }
 
 type Config struct {
