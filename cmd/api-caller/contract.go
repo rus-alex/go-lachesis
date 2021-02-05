@@ -4,37 +4,57 @@ package main
 //go:generate go run github.com/ethereum/go-ethereum/cmd/abigen --bin=./ballot/Ballot.bin --abi=./ballot/Ballot.abi --pkg=ballot --type=Contract --out=ballot/contract.go
 
 import (
-	"crypto/ecdsa"
 	"math/big"
 
-	// "github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/Fantom-foundation/go-lachesis/cmd/api-caller/ballot"
+	"github.com/Fantom-foundation/go-lachesis/hash"
 )
 
-func (g *Generator) createContract(key *ecdsa.PrivateKey, nonce uint, amount *big.Int) *types.Transaction {
-	bin := common.FromHex(ballot.ContractBin)
-	tx := types.NewContractCreation(uint64(nonce), amount, gasLimit*10000, gasPrice, bin)
-	tx, err := types.SignTx(tx, g.signer, key)
-	if err != nil {
-		panic(err)
-	}
+func (g *Generator) ballotCreateContract(admin uint) TxMaker {
+	payer := g.Payer(admin)
+	return func(client *ethclient.Client) (*types.Transaction, error) {
+		_, tx, _, err := ballot.DeployContract(payer, client, [][32]byte{
+			ballotProposal("option 1"),
+			ballotProposal("option 2"),
+			ballotProposal("option 3"),
+		})
+		if err != nil {
+			panic(err)
+		}
 
-	return tx
+		return tx, err
+	}
 }
 
-/*
-func (env *testEnv) Payer(n int, amounts ...*big.Int) *bind.TransactOpts {
-	key := env.privateKey(n)
-	t := bind.NewKeyedTransactor(key)
-	nonce, _ := env.PendingNonceAt(nil, env.Address(n))
-	t.Nonce = big.NewInt(int64(nonce))
-	t.Value = big.NewInt(0)
-	for _, amount := range amounts {
-		t.Value.Add(t.Value, amount)
+func (g *Generator) ballotRight(admin uint, addr common.Address, voiter uint) TxMaker {
+	payer := g.Payer(admin)
+	to := g.Payer(voiter).From
+	return func(client *ethclient.Client) (*types.Transaction, error) {
+		transactor, err := ballot.NewContractTransactor(addr, client)
+		if err != nil {
+			panic(err)
+		}
+
+		return transactor.GiveRightToVote(payer, to)
 	}
-	return t
 }
-*/
+
+func (g *Generator) ballotVoite(voiter uint, addr common.Address, proposal int64) TxMaker {
+	payer := g.Payer(voiter)
+	return func(client *ethclient.Client) (*types.Transaction, error) {
+		transactor, err := ballot.NewContractTransactor(addr, client)
+		if err != nil {
+			panic(err)
+		}
+
+		return transactor.Vote(payer, big.NewInt(proposal))
+	}
+}
+
+func ballotProposal(s string) [32]byte {
+	return hash.Of([]byte(s))
+}

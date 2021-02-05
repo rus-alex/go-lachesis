@@ -21,11 +21,6 @@ type Sender struct {
 	callbacks map[common.Hash]TxCallback
 	headers   chan *types.Header
 
-	cfg struct {
-		listenToBlocks bool
-		sendTrustedTx  bool
-	}
-
 	done chan struct{}
 	work sync.WaitGroup
 
@@ -73,7 +68,6 @@ func (s *Sender) background() {
 		client *ethclient.Client
 		err    error
 		tx     *Transaction
-		info   string
 		sbscr  ethereum.Subscription
 	)
 
@@ -109,7 +103,7 @@ func (s *Sender) background() {
 			client = s.connect()
 		}
 
-		if s.cfg.listenToBlocks && sbscr == nil {
+		if sbscr == nil {
 			sbscr = s.subscribe(client)
 			if sbscr == nil {
 				disconnect()
@@ -117,22 +111,22 @@ func (s *Sender) background() {
 			}
 		}
 
-		txHash := tx.Raw.Hash()
-		if tx.Callback != nil {
-			s.callbacks[txHash] = tx.Callback
+		t, err := tx.Make(client)
+		var txHash common.Hash
+		if t != nil {
+			txHash = t.Hash()
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-		err = client.SendTransaction(ctx, tx.Raw)
-		cancel()
 		if err == nil {
+			if tx.Callback != nil {
+				s.callbacks[txHash] = tx.Callback
+			}
 			txCountSentMeter.Inc(1)
-			s.Log.Debug("tx sending ok", "hash", txHash, "amount", tx.Raw.Value(), "nonce", tx.Raw.Nonce())
+			s.Log.Info("tx sending ok", "hash", txHash, "dsc", tx.Dsc)
 			tx = nil
 			continue
 		}
 
 		if tx.Callback != nil {
-			delete(s.callbacks, txHash)
 			tx.Callback(nil, err)
 		}
 
@@ -140,11 +134,11 @@ func (s *Sender) background() {
 		case fmt.Sprintf("known transaction: %x", txHash),
 			evmcore.ErrNonceTooLow.Error(),
 			evmcore.ErrReplaceUnderpriced.Error():
-			s.Log.Warn("tx sending skip", "info", info, "amount", tx.Raw.Value(), "cause", err, "nonce", tx.Raw.Nonce())
+			s.Log.Warn("tx sending skip", "hash", txHash, "dsc", tx.Dsc, "cause", err)
 			tx = nil
 			continue
 		default:
-			s.Log.Error("tx sending err", "info", info, "amount", tx.Raw.Value(), "cause", err, "nonce", tx.Raw.Nonce())
+			s.Log.Error("tx sending err", "hash", txHash, "dsc", tx.Dsc, "err", err)
 			disconnect()
 			s.delay()
 			continue
@@ -164,7 +158,10 @@ func (s *Sender) connect() *ethclient.Client {
 }
 
 func (s *Sender) subscribe(client *ethclient.Client) ethereum.Subscription {
-	sbscr, err := client.SubscribeNewHead(context.Background(), s.headers)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	sbscr, err := client.SubscribeNewHead(ctx, s.headers)
 	if err != nil {
 		s.Log.Error("subscribe to", "url", s.url, "err", err)
 		s.delay()
@@ -176,19 +173,22 @@ func (s *Sender) subscribe(client *ethclient.Client) ethereum.Subscription {
 
 func (s *Sender) onNewHeader(client *ethclient.Client, h *types.Header) error {
 	b := evmcore.ConvertFromEthHeader(h)
+	s.Log.Debug("new block", "number", b.Number, "block", b.Hash)
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	txsCount, err := client.TransactionCount(ctx, b.Hash)
 	if err != nil {
-		s.Log.Error("new block", "number", b.Number, "block", b.Hash, "err", err)
+		s.Log.Error("block txs", "number", b.Number, "block", b.Hash, "err", err)
 		return err
 	}
+	s.Log.Debug("block txs", "number", b.Number, "block", b.Hash, "count", txsCount)
 
 	for index := uint(0); index < txsCount; index++ {
 		tx, err := client.TransactionInBlock(ctx, b.Hash, index)
 		if err != nil {
-			s.Log.Error("new tx", "number", b.Number, "block", b.Hash, "index", index, "err", err)
+			s.Log.Error("tx of block", "number", b.Number, "block", b.Hash, "index", index, "err", err)
 			return err
 		}
 		txHash := tx.Hash()
@@ -200,9 +200,10 @@ func (s *Sender) onNewHeader(client *ethclient.Client, h *types.Header) error {
 
 		r, err := client.TransactionReceipt(ctx, txHash)
 		if err != nil {
-			s.Log.Error("new recepie", "number", b.Number, "block", b.Hash, "tx", txHash, "err", err)
+			s.Log.Error("new receipt", "number", b.Number, "block", b.Hash, "index", index, "tx", txHash, "err", err)
 			return err
 		}
+		s.Log.Debug("new receipt", "number", b.Number, "block", b.Hash, "index", index, "tx", txHash)
 
 		callback(r, nil)
 	}

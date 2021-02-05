@@ -93,6 +93,9 @@ func (n *Nodes) background(input <-chan *Transaction) {
 
 	i := 0
 	for tx := range input {
+		if tx == nil {
+			continue
+		}
 		c := n.conns[i]
 		c.Send(n.wrapWithCounter(tx))
 		i = (i + 1) % len(n.conns)

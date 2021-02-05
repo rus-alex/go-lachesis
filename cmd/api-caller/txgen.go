@@ -1,24 +1,28 @@
 package main
 
 import (
+	"fmt"
 	"math"
 	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/Fantom-foundation/go-lachesis/logger"
-	"github.com/Fantom-foundation/go-lachesis/utils"
 )
 
+type TxMaker func(*ethclient.Client) (*types.Transaction, error)
 type TxCallback func(*types.Receipt, error)
 
 type Transaction struct {
-	Raw      *types.Transaction
+	Make     TxMaker
 	Callback TxCallback
+	Dsc      string
 }
 
 type Generator struct {
@@ -141,72 +145,107 @@ func (g *Generator) background(output chan<- *Transaction) {
 }
 
 func (g *Generator) Yield() *Transaction {
+	if !g.generatorState.IsReady(g.done) {
+		return nil
+	}
 	tx := g.generate(g.position, &g.generatorState)
+	g.Log.Info("generated tx", "position", g.position, "dsc", tx.Dsc)
 	g.position++
 
 	return tx
 }
 
 type genState struct {
-	BallotAddr common.Address
-	sync.WaitGroup
+	ready       chan struct{}
+	BallotAdmin uint
+	BallotAddr  common.Address
+}
+
+func (s *genState) NotReady() {
+	s.ready = make(chan struct{})
+}
+
+func (s *genState) IsReady(done <-chan struct{}) bool {
+	if s.ready == nil {
+		return true
+	}
+
+	select {
+	case <-done:
+		return false
+	case <-s.ready:
+		return true
+	}
+}
+
+func (s *genState) Ready() {
+	close(s.ready)
 }
 
 func (g *Generator) generate(position uint, state *genState) *Transaction {
-	var count = uint(len(g.accs))
-
-	a := position % count
-	b := (position + 1) % count
-
-	from := g.accs[a]
-	if from == nil {
-		from = MakeAcc(a + g.offset)
-		g.accs[a] = from
-	}
-	a += g.offset
-
-	to := g.accs[b]
-	if to == nil {
-		to = MakeAcc(b + g.offset)
-		g.accs[b] = to
-	}
-	b += g.offset
-
-	nonce := position / count
-
-	state.Wait()
+	// count := uint(len(g.accs))
 	var (
-		tx       *types.Transaction
+		maker    TxMaker
 		callback TxCallback
+		dsc      string
 	)
 	switch step := (position % 5); step {
+
 	case 0:
-		amount := utils.ToFtm(0)
-		tx = g.createContract(from.Key, nonce, amount)
-		state.Add(1)
+		a := step
+		dsc = "ballot contract creation"
+		maker = g.ballotCreateContract(a)
+		state.NotReady()
 		callback = func(r *types.Receipt, e error) {
-			state.Done()
+			state.BallotAdmin = a
 			state.BallotAddr = r.ContractAddress
+			state.Ready()
 		}
-	case 1:
+
+	case 1, 2:
+		a := step - 0
+		dsc = fmt.Sprintf("ballot right for %d", a)
+		maker = g.ballotRight(state.BallotAdmin, state.BallotAddr, a)
+		state.NotReady()
+		callback = func(r *types.Receipt, e error) {
+			state.Ready()
+		}
 		break
-	case 2:
+
+	case 3, 4:
+		a := step - 2
+		dsc = fmt.Sprintf("ballot voite for %d", a)
+		maker = g.ballotVoite(a, state.BallotAddr, 1)
 		break
-	case 3:
-		break
-	case 4:
-		break
-	case 5:
-		break
+
 	default:
 		panic("-")
 	}
 
-	transaction := &Transaction{
-		Raw:      tx,
+	return &Transaction{
+		Make:     maker,
 		Callback: callback,
+		Dsc:      dsc,
+	}
+}
+
+func (g *Generator) Payer(n uint, amounts ...*big.Int) *bind.TransactOpts {
+	from := g.accs[n]
+	if from == nil {
+		from = MakeAcc(n + g.offset)
+		g.accs[n] = from
 	}
 
-	// g.Log.Info("regular tx", "from", a, "to", b, "amount", amount, "nonce", nonce)
-	return transaction
+	t := bind.NewKeyedTransactor(from.Key)
+
+	t.Value = big.NewInt(0)
+	for _, amount := range amounts {
+		t.Value.Add(t.Value, amount)
+	}
+
+	return t
+}
+
+func (g *Generator) ReadOnly() *bind.CallOpts {
+	return &bind.CallOpts{}
 }

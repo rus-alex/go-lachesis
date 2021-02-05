@@ -1,12 +1,10 @@
-ChainId = 250
+ChainId = 4003
 
 URLs = [
     "ws://127.0.0.1:4500",
     "ws://127.0.0.1:4500",
     "ws://127.0.0.1:4500",
 ]
-
-SendTrusted = false
 
 [Accs]
     Count = 3
