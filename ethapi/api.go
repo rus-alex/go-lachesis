@@ -1394,6 +1394,7 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, ha
 		"cumulativeGasUsed": hexutil.Uint64(receipt.CumulativeGasUsed),
 		"contractAddress":   nil,
 		"logs":              receipt.Logs,
+		"logsBloom":         &types.Bloom{},
 	}
 
 	// Assign receipt status or post state.
