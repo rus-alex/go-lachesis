@@ -5,6 +5,7 @@ package main
 
 import (
 	"math/big"
+	"math/rand"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -14,32 +15,25 @@ import (
 	"github.com/Fantom-foundation/go-lachesis/hash"
 )
 
+var ballotOptions = [][32]byte{
+	ballotProposal("option 1"),
+	ballotProposal("option 2"),
+	ballotProposal("option 3"),
+}
+
+func ballotRandChose() int64 {
+	return rand.Int63n(int64(len(ballotOptions)))
+}
+
 func (g *Generator) ballotCreateContract(admin uint) TxMaker {
 	payer := g.Payer(admin)
 	return func(client *ethclient.Client) (*types.Transaction, error) {
-		_, tx, _, err := ballot.DeployContract(payer, client, [][32]byte{
-			ballotProposal("option 1"),
-			ballotProposal("option 2"),
-			ballotProposal("option 3"),
-		})
+		_, tx, _, err := ballot.DeployContract(payer, client, ballotOptions)
 		if err != nil {
 			panic(err)
 		}
 
 		return tx, err
-	}
-}
-
-func (g *Generator) ballotRight(admin uint, addr common.Address, voiter uint) TxMaker {
-	payer := g.Payer(admin)
-	to := g.Payer(voiter).From
-	return func(client *ethclient.Client) (*types.Transaction, error) {
-		transactor, err := ballot.NewContractTransactor(addr, client)
-		if err != nil {
-			panic(err)
-		}
-
-		return transactor.GiveRightToVote(payer, to)
 	}
 }
 
@@ -52,6 +46,20 @@ func (g *Generator) ballotVoite(voiter uint, addr common.Address, proposal int64
 		}
 
 		return transactor.Vote(payer, big.NewInt(proposal))
+	}
+}
+
+func (g *Generator) ballotWinner(addr common.Address) TxMaker {
+	return func(client *ethclient.Client) (*types.Transaction, error) {
+		caller, err := ballot.NewContractCaller(addr, client)
+		if err != nil {
+			panic(err)
+		}
+
+		winner, err := caller.WinnerName(g.ReadOnly())
+		g.Log.Info("The winner", "hash", winner)
+
+		return nil, err
 	}
 }
 

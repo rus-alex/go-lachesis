@@ -156,9 +156,8 @@ func (g *Generator) Yield() *Transaction {
 }
 
 type genState struct {
-	ready       chan struct{}
-	BallotAdmin uint
-	BallotAddr  common.Address
+	ready      chan struct{}
+	BallotAddr common.Address
 }
 
 func (s *genState) NotReady() {
@@ -189,34 +188,28 @@ func (g *Generator) generate(position uint, state *genState) *Transaction {
 		callback TxCallback
 		dsc      string
 	)
-	switch step := (position % 5); step {
 
-	case 0:
-		a := step
+	a := position % uint(len(g.accs))
+
+	switch step := (position % 10001); {
+
+	case step == 0:
 		dsc = "ballot contract creation"
 		maker = g.ballotCreateContract(a)
 		state.NotReady()
 		callback = func(r *types.Receipt, e error) {
-			state.BallotAdmin = a
 			state.BallotAddr = r.ContractAddress
 			state.Ready()
 		}
 
-	case 1, 2:
-		a := step - 0
-		dsc = fmt.Sprintf("ballot right for %d", a)
-		maker = g.ballotRight(state.BallotAdmin, state.BallotAddr, a)
-		state.NotReady()
-		callback = func(r *types.Receipt, e error) {
-			state.Ready()
-		}
+	case 0 < step && step < 10000:
+		dsc = fmt.Sprintf("ballot voite for %d", a)
+		maker = g.ballotVoite(a, state.BallotAddr, ballotRandChose())
 		break
 
-	case 3, 4:
-		a := step - 2
-		dsc = fmt.Sprintf("ballot voite for %d", a)
-		maker = g.ballotVoite(a, state.BallotAddr, 1)
-		break
+	case step == 10001:
+		dsc = "ballot winner reading"
+		maker = g.ballotWinner(state.BallotAddr)
 
 	default:
 		panic("-")
