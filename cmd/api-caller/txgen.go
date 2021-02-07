@@ -207,12 +207,12 @@ func (g *Generator) generate(position uint, state *genState) *Transaction {
 		maker = g.ballotVoite(a, state.BallotAddr, ballotRandChose())
 		break
 
-	case step == 10001:
+	case step == 10000:
 		dsc = "ballot winner reading"
 		maker = g.ballotWinner(state.BallotAddr)
 
 	default:
-		panic("-")
+		panic(fmt.Sprintf("unknown step %d", step))
 	}
 
 	return &Transaction{
