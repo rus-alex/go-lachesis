@@ -41,15 +41,12 @@ contract Ballot {
     /// Give your vote (including votes delegated to you)
     /// to proposal `proposals[proposal].name`.
     function vote(uint proposal) public {
-        Voter storage sender = voters[msg.sender];
-        if (sender.vote == proposal+1) {
-            return;
+        uint senderVote = voters[msg.sender].vote;
+        if (senderVote > 0) {
+            proposals[senderVote-1].voteCount -= 1;
         }
-        if (sender.vote > 0) {
-            proposals[sender.vote-1].voteCount -= 1;
-        }
-        sender.vote == proposal+1;
-        proposals[sender.vote-1].voteCount += 1;
+        voters[msg.sender].vote == proposal+1;
+        proposals[proposal].voteCount += 1;
     }
 
     /// @dev Computes the winning proposal taking all
