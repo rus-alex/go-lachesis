@@ -203,8 +203,9 @@ func (g *Generator) generate(position uint, state *genState) *Transaction {
 		}
 
 	case 0 < step && step < 10000:
-		dsc = fmt.Sprintf("ballot voite for %d", a)
-		maker = g.ballotVoite(a, state.BallotAddr, ballotRandChose())
+		chose := ballotRandChose()
+		dsc = fmt.Sprintf("%d voites for %d", a, chose)
+		maker = g.ballotVoite(a, state.BallotAddr, chose)
 		break
 
 	case step == 10000:

@@ -19,6 +19,12 @@ var ballotOptions = [][32]byte{
 	ballotProposal("option 1"),
 	ballotProposal("option 2"),
 	ballotProposal("option 3"),
+	ballotProposal("option 4"),
+	ballotProposal("option 5"),
+	ballotProposal("option 6"),
+	ballotProposal("option 7"),
+	ballotProposal("option 8"),
+	ballotProposal("option 9"),
 }
 
 func ballotRandChose() int64 {
