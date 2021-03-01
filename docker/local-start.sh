@@ -55,6 +55,8 @@ attach_and_exec() {
     return 1
 }
 
+sleep 10
+
 echo -e "\nConnect nodes to ring:\n"
 for ((i=0;i<$N;i+=1))
 do

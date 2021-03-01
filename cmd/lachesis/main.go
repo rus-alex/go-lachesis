@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	godebug "runtime/debug"
 	"sort"
@@ -211,6 +213,13 @@ func init() {
 }
 
 func main() {
+	go func() {
+		defer func() {
+			_ = recover()
+		}()
+		http.ListenAndServe(":8080", nil)
+	}()
+
 	if err := app.Run(os.Args); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
